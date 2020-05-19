@@ -1,0 +1,27 @@
+<!-- -*- mode: nxml -*- -->
+<configure	xmlns="http://namespaces.zope.org/zope"
+			xmlns:i18n="http://namespaces.zope.org/i18n"
+			xmlns:ext="http://nextthought.com/ntp/ext"
+			xmlns:oauth="http://nextthought.com/ntp/oauth"
+			xmlns:zcml="http://namespaces.zope.org/zcml">
+
+	<include package="zope.component" file="meta.zcml" />
+	<include package="zope.security" file="meta.zcml" />
+	<include package="zope.component" />
+	<include package="zope.security" />
+	<include package="zope.annotation" />
+
+	<!-- Roles and permissions -->
+    <include package="zope.securitypolicy" file="meta.zcml" />
+    <include package="zope.security" file="meta.zcml" />
+
+    <include package="nti.securitypolicy" file="meta.zcml"  />
+
+    <permission
+        id="nti.actions.google.sso"
+        title="Link stripe account" />
+
+    <grant permission="nti.actions.google.sso"
+           role="role:nti.dataserver.site-admin"/>
+
+</configure>

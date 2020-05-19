@@ -59,6 +59,7 @@ setup(
         'setuptools',
         'pyramid',
         'six',
+        'nti.common',
         'nti.app.products.integration',
         'zope.component',
         'zope.i18nmessageid',
