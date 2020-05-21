@@ -58,6 +58,10 @@ class IGoogleLogonSettings(interface.Interface):
                                   required=False)
 
 
+class IPersistentGoogleLogonSettings(IGoogleLogonSettings):
+    pass
+
+
 class IGoogleLogonLookupUtility(interface.Interface):
     """
     A utility to handle a user after google authentication.

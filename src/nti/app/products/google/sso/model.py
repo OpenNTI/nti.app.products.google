@@ -13,6 +13,7 @@ from zope import interface
 from zope.container.contained import Contained
 
 from nti.app.products.google.sso.interfaces import IGoogleLogonSettings
+from nti.app.products.google.sso.interfaces import IPersistentGoogleLogonSettings
 
 from nti.dublincore.datastructures import PersistentCreatedModDateTrackingObject
 
@@ -25,22 +26,25 @@ from nti.schema.schema import SchemaConfigured
 logger = __import__('logging').getLogger(__name__)
 
 
-@WithRepr
-@interface.implementer(IGoogleLogonSettings)
 class AbstractGoogleLogonSettings(SchemaConfigured):
-    createDirectFieldProperties(IGoogleLogonSettings)
 
     __parent__ = None
     __name__ = None
 
 
+@WithRepr
+@interface.implementer(IGoogleLogonSettings)
 class GoogleLogonSettings(AbstractGoogleLogonSettings):
 
+    createDirectFieldProperties(IGoogleLogonSettings)
     mimeType = mime_type = "application/vnd.nextthought.site.googlelogonsettings"
 
 
+@WithRepr
+@interface.implementer(IPersistentGoogleLogonSettings)
 class PersistentGoogleLogonSettings(PersistentCreatedModDateTrackingObject,
                                     Contained,
                                     AbstractGoogleLogonSettings):
 
+    createDirectFieldProperties(IPersistentGoogleLogonSettings)
     mimeType = mime_type = "application/vnd.nextthought.site.googlelogonsettings"

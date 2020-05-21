@@ -17,7 +17,9 @@ from nti.app.products.google.sso import ENABLE_GOOGLE_SSO_VIEW
 
 from nti.app.products.google.sso.authorization import ACT_ENABLE_GOOGLE_SSO
 
+from nti.app.products.google.sso.interfaces import IGoogleLogonSettings
 from nti.app.products.google.sso.interfaces import IGoogleSSOIntegration
+from nti.app.products.google.sso.interfaces import IPersistentGoogleLogonSettings
 
 from nti.app.products.integration.integration import AbstractIntegration
 
@@ -28,9 +30,6 @@ from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecora
 from nti.app.store.license_utils import can_integrate
 
 from nti.appserver.pyramid_authorization import has_permission
-
-from nti.common.interfaces import IOAuthKeys
-from nti.common.interfaces import IPersistentOAuthKeys
 
 from nti.dataserver.interfaces import IDataserverFolder
 
@@ -103,13 +102,13 @@ class _GoogleSSOIntegrationDecorator(AbstractAuthenticatedRequestAwareDecorator)
     def _do_decorate_external(self, context, result):
         links = result.setdefault(LINKS, [])
         link = None
-        oauth_keys = component.queryUtility(IOAuthKeys, name="google")
+        logon_settings = component.queryUtility(IGoogleLogonSettings)
         link_context = find_interface(context, IDataserverFolder)
-        if oauth_keys is None:
+        if logon_settings is None:
             link = Link(link_context,
                         elements=("@@" + ENABLE_GOOGLE_SSO_VIEW,),
                         rel='enable')
-        elif IPersistentOAuthKeys.providedBy(oauth_keys):
+        elif IPersistentGoogleLogonSettings.providedBy(logon_settings):
             # Only persistent keys can be deactivated
             link = Link(link_context,
                         method='DELETE',
