@@ -11,6 +11,8 @@
 	<include package="zope.security" />
 	<include package="zope.annotation" />
 
+    <include package="." file="meta.zcml" />
+
 	<!-- Roles and permissions -->
     <include package="zope.securitypolicy" file="meta.zcml" />
     <include package="zope.security" file="meta.zcml" />
@@ -23,5 +25,26 @@
 
     <grant permission="nti.actions.google.sso"
            role="role:nti.dataserver.site-admin"/>
+
+    <include package="nti.externalization" file="meta.zcml" />
+    <include package="nti.externalization" />
+    <ext:registerAutoPackageIO
+        root_interfaces=".interfaces.IGoogleLogonSettings"
+        modules=".model" />
+
+    <!-- Google logon utilities -->
+    <utility factory=".logon.GoogleLogonLookupUtility" />
+
+    <include package="nti.common" file="meta.zcml" />
+    <oauth:registerOAuthKeys
+            apiKey="621475736574-dfgpfgdojhmli7otmhdu4qss4jo9n0b8.apps.googleusercontent.com"
+            secretKey="IgsnDiIOYx0GMDVpVCp+Vhw+JS5zFwEH"
+            id="google" />
+
+    <subscriber factory=".logon._SimpleMissingUserGoogleLinkProvider"
+                provides="nti.appserver.interfaces.ILogonLinkProvider" />
+
+    <subscriber factory=".logon._SimpleUnauthenticatedUserGoogleLinkProvider"
+                provides="nti.appserver.interfaces.IUnauthenticatedUserLinkProvider" />
 
 </configure>

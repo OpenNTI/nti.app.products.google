@@ -1,0 +1,10 @@
+<configure	xmlns="http://namespaces.zope.org/zope"
+			xmlns:meta="http://namespaces.zope.org/meta">
+
+	<meta:directives namespace="http://nextthought.com/ntp/google">
+		<meta:directive	name="registerGoogleLogonSettings"
+						schema=".zcml.IRegisterGoogleLogonSettings"
+						handler=".zcml.registerGoogleLogonSettings" />
+	</meta:directives>
+
+</configure>

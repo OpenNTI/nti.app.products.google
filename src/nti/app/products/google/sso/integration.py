@@ -32,6 +32,8 @@ from nti.appserver.pyramid_authorization import has_permission
 from nti.common.interfaces import IOAuthKeys
 from nti.common.interfaces import IPersistentOAuthKeys
 
+from nti.dataserver.interfaces import IDataserverFolder
+
 from nti.externalization.interfaces import IExternalMappingDecorator
 from nti.externalization.interfaces import StandardExternalFields
 
@@ -42,6 +44,9 @@ from nti.links.links import Link
 from nti.schema.fieldproperty import createDirectFieldProperties
 
 from nti.schema.schema import SchemaConfigured
+
+from nti.traversal.traversal import find_interface
+from nti.dataserver.authorization import ACT_NTI_ADMIN
 
 LINKS = StandardExternalFields.LINKS
 
@@ -71,6 +76,10 @@ class GoogleSSOIntegration(AbstractIntegration,
 @interface.implementer(IIntegrationCollectionProvider)
 class GoogleIntegrationProvider(object):
 
+    def can_integrate(self):
+        #TODO: query site policy/license
+        return True
+
     def get_collection_iter(self):
         """
         Return a GoogleSSOIntegration object by which we can enable
@@ -87,22 +96,23 @@ class GoogleIntegrationProvider(object):
 class _GoogleSSOIntegrationDecorator(AbstractAuthenticatedRequestAwareDecorator):
 
     def _predicate(self, context, unused_result):
+        # Only NT Admins for now`
         return super(_GoogleSSOIntegrationDecorator, self)._predicate(context, unused_result) \
-           and has_permission(ACT_ENABLE_GOOGLE_SSO, context, self.request)
+           and has_permission(ACT_NTI_ADMIN, context, self.request)
 
     def _do_decorate_external(self, context, result):
-        # FIXME: integratoin context?
         links = result.setdefault(LINKS, [])
         link = None
         oauth_keys = component.queryUtility(IOAuthKeys, name="google")
+        link_context = find_interface(context, IDataserverFolder)
         if oauth_keys is None:
-            link = Link(context,
+            link = Link(link_context,
                         elements=("@@" + ENABLE_GOOGLE_SSO_VIEW,),
-                        rel='enable_google_sso')
+                        rel='enable')
         elif IPersistentOAuthKeys.providedBy(oauth_keys):
             # Only persistent keys can be deactivated
-            link = Link(context,
+            link = Link(link_context,
                         method='DELETE',
-                        rel='disable_google_sso')
+                        rel='disable')
         if link is not None:
-            links.append(located_link(context, link))
+            links.append(located_link(link_context, link))
