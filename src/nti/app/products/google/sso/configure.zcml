@@ -42,10 +42,10 @@
             secretKey="IgsnDiIOYx0GMDVpVCp+Vhw+JS5zFwEH"
             id="google" />
 
-    <subscriber factory=".logon._SimpleMissingUserGoogleLinkProvider"
+    <subscriber factory=".logon.SimpleMissingUserGoogleLinkProvider"
                 provides="nti.appserver.interfaces.ILogonLinkProvider" />
 
-    <subscriber factory=".logon._SimpleUnauthenticatedUserGoogleLinkProvider"
+    <subscriber factory=".logon.SimpleUnauthenticatedUserGoogleLinkProvider"
                 provides="nti.appserver.interfaces.IUnauthenticatedUserLinkProvider" />
 
 </configure>

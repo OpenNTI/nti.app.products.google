@@ -20,7 +20,7 @@ class SharedConfiguringTestLayer(ZopeComponentLayer,
                                  GCLayerMixin,
                                  ConfiguringLayerMixin):
 
-    set_up_packages = ('nti.app.products.salesforce',)
+    set_up_packages = ('nti.app.products.google',)
 
     @classmethod
     def setUp(cls):

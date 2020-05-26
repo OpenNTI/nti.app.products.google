@@ -21,10 +21,9 @@ from nti.app.products.integration.interfaces import IIntegration
 
 from nti.coremetadata.interfaces import IUser
 
-from nti.schema import Bool
-from nti.schema import ValidTextLine
-
+from nti.schema.field import Bool
 from nti.schema.field import ListOrTuple
+from nti.schema.field import ValidTextLine
 
 
 class IGoogleSSOIntegration(IIntegration):
@@ -42,6 +41,10 @@ class IGoogleLogonSettings(interface.Interface):
     lookup_user_by_email = Bool(title=u'Whether to lookup a user by email (vs external id)',
                                 default=False,
                                 required=False)
+
+    lookup_user_by_username = Bool(title=u'Whether to lookup a user by username (vs external id)',
+                                   default=False,
+                                   required=False)
 
     update_user_on_login = Bool(title=u'Whether to update user info on login',
                                 default=False,

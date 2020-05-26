@@ -25,22 +25,23 @@ from zope.component.hooks import getSite
 
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 
+from nti.app.products.google.sso.interfaces import IGoogleLogonSettings
+from nti.app.products.google.sso.interfaces import IGoogleLogonLookupUtility
+
+from nti.app.products.google.sso.logon import GoogleLogonSettings
+from nti.app.products.google.sso.logon import GoogleLogonLookupUtility
+from nti.app.products.google.sso.logon import SimpleMissingUserGoogleLinkProvider
+from nti.app.products.google.sso.logon import SimpleUnauthenticatedUserGoogleLinkProvider
+
 from nti.appserver.interfaces import ILogonLinkProvider
 from nti.appserver.interfaces import IUnauthenticatedUserLinkProvider
-from nti.appserver.interfaces import IGoogleLogonLookupUtility
-from nti.appserver.interfaces import IGoogleLogonSettings
-
-from nti.appserver.logon import GoogleLogonSettings
-from nti.appserver.logon import GoogleLogonLookupUtility
-from nti.appserver.logon import SimpleUnauthenticatedUserGoogleLinkProvider
-from nti.appserver.logon import SimpleMissingUserGoogleLinkProvider
 
 from nti.common.string import is_true
 
 from nti.dataserver import authorization as nauth
 
-from nti.dataserver.interfaces import IDataserverFolder
 from nti.dataserver.interfaces import IMissingUser
+from nti.dataserver.interfaces import IDataserverFolder
 
 from nti.site import unregisterUtility
 

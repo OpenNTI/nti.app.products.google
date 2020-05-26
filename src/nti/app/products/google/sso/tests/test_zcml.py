@@ -16,6 +16,11 @@ from hamcrest import has_property
 from hamcrest import contains_inanyorder
 
 from zope import component
+from zope import interface
+
+from zope.site.folder import Folder
+
+from zope.traversing.interfaces import IPathAdapter
 
 from nti.app.products.google.sso.interfaces import IGoogleLogonSettings
 
@@ -24,8 +29,13 @@ from nti.app.products.google.sso.logon import SimpleUnauthenticatedUserGoogleLin
 
 from nti.app.testing.request_response import DummyRequest
 
+from nti.appserver.account_creation_views import DenyAccountCreatePathAdapter
+from nti.appserver.account_creation_views import DenyAccountCreatePreflightPathAdapter
+
 from nti.appserver.interfaces import ILogonLinkProvider
 from nti.appserver.interfaces import IUnauthenticatedUserLinkProvider
+
+from nti.dataserver.interfaces import IDataserverFolder
 
 from nti.dataserver.users.missing_user import MissingUser
 
@@ -35,7 +45,7 @@ ZCML_STRING = """
 <configure  xmlns="http://namespaces.zope.org/zope"
             xmlns:i18n="http://namespaces.zope.org/i18n"
             xmlns:zcml="http://namespaces.zope.org/zcml"
-            xmlns:salesforce="http://nextthought.com/ntp/google">
+            xmlns:google="http://nextthought.com/ntp/google">
 
     <include package="zope.component" file="meta.zcml" />
     <include package="zope.security" file="meta.zcml" />
@@ -43,10 +53,17 @@ ZCML_STRING = """
     <include package="." file="meta.zcml" />
 
     <configure>
-        <google:registerGoogleLogonSettings disable_account_creation="true",
+        <google:registerGoogleLogonSettings disable_account_creation="true"
+                                            lookup_user_by_username="false"
                                             lookup_user_by_email="true"
                                             update_user_on_login="true"
                                             read_only_profile="true" />
+
+        <subscriber factory="nti.app.products.google.sso.logon.SimpleMissingUserGoogleLinkProvider"
+                    provides="nti.appserver.interfaces.ILogonLinkProvider" />
+
+        <subscriber factory="nti.app.products.google.sso.logon.SimpleUnauthenticatedUserGoogleLinkProvider"
+                    provides="nti.appserver.interfaces.IUnauthenticatedUserLinkProvider" />
     </configure>
 </configure>
 """
@@ -56,7 +73,7 @@ ZCML_STRING_DOMAINS = """
 <configure  xmlns="http://namespaces.zope.org/zope"
             xmlns:i18n="http://namespaces.zope.org/i18n"
             xmlns:zcml="http://namespaces.zope.org/zcml"
-            xmlns:salesforce="http://nextthought.com/ntp/google">
+            xmlns:google="http://nextthought.com/ntp/google">
 
     <include package="zope.component" file="meta.zcml" />
     <include package="zope.security" file="meta.zcml" />
@@ -64,11 +81,18 @@ ZCML_STRING_DOMAINS = """
     <include package="." file="meta.zcml" />
 
     <configure>
-        <google:registerGoogleLogonSettings disable_account_creation="false",
+        <google:registerGoogleLogonSettings disable_account_creation="false"
                                             lookup_user_by_email="false"
+                                            lookup_user_by_username="true"
                                             update_user_on_login="false"
                                             read_only_profile="false"
-                                            hosted_domains=["nextthought.com","testdomain.com"] />
+                                            hosted_domains="nextthought.com,testdomain.com" />
+
+        <subscriber factory="nti.app.products.google.sso.logon.SimpleMissingUserGoogleLinkProvider"
+                    provides="nti.appserver.interfaces.ILogonLinkProvider" />
+
+        <subscriber factory="nti.app.products.google.sso.logon.SimpleUnauthenticatedUserGoogleLinkProvider"
+                    provides="nti.appserver.interfaces.IUnauthenticatedUserLinkProvider" />
     </configure>
 </configure>
 """
@@ -76,12 +100,14 @@ ZCML_STRING_DOMAINS = """
 
 class TestZcml(nti.testing.base.ConfiguringTestBase):
 
-    def test_registration(self):
+    def test_settings(self):
         self.configure_string(ZCML_STRING)
         logon_settings = component.queryUtility(IGoogleLogonSettings)
         assert_that(logon_settings, not_none())
         assert_that(logon_settings,
                     has_property('lookup_user_by_email', is_(True)))
+        assert_that(logon_settings,
+                    has_property('lookup_user_by_username', is_(False)))
         assert_that(logon_settings,
                     has_property('update_user_on_login', is_(True)))
         assert_that(logon_settings,
@@ -90,27 +116,63 @@ class TestZcml(nti.testing.base.ConfiguringTestBase):
                     has_property('hosted_domains', none()))
 
         request = DummyRequest()
+        ds_folder = Folder()
+        interface.alsoProvides(ds_folder, IDataserverFolder)
+
+        path_adapter = component.queryMultiAdapter((ds_folder, request),
+                                                   IPathAdapter,
+                                                   name='account.create')
+        assert_that(isinstance(path_adapter, DenyAccountCreatePathAdapter),
+                    is_(True))
+
+        path_adapter = component.queryMultiAdapter((ds_folder, request),
+                                                   IPathAdapter,
+                                                   name='account.preflight.create')
+        assert_that(isinstance(path_adapter, DenyAccountCreatePreflightPathAdapter),
+                    is_(True))
+
         missing_user = MissingUser('test')
         link_providers = component.subscribers((request,),
                                                IUnauthenticatedUserLinkProvider)
-        salesforce_links = [x for x in link_providers if isinstance(x, SimpleUnauthenticatedUserGoogleLinkProvider)]
-        assert_that(salesforce_links, has_length(1))
-        assert_that(salesforce_links[0].title, is_("logon link title"))
+        user_links = [x for x in link_providers if isinstance(x, SimpleUnauthenticatedUserGoogleLinkProvider)]
+        assert_that(user_links, has_length(1))
 
-        link_providers = component.subscribers((missing_user, request), ILogonLinkProvider)
-        salesforce_links = [x for x in link_providers if isinstance(x, SimpleMissingUserGoogleLinkProvider)]
-        assert_that(salesforce_links, has_length(1))
-        assert_that(salesforce_links[0].title, is_("logon link title"))
+#         from IPython.terminal.debugger import set_trace;set_trace()
+#         link_providers = component.subscribers((missing_user, request), ILogonLinkProvider)
+#         from IPython.terminal.debugger import set_trace;set_trace()
+#         user_links = [x for x in link_providers if isinstance(x, SimpleMissingUserGoogleLinkProvider)]
+#         assert_that(user_links, has_length(1))
 
+    def test_settings_with_domains(self):
+        """
+        Second pass, with domains and with account creation enabled
+        """
         self.configure_string(ZCML_STRING_DOMAINS)
         logon_settings = component.queryUtility(IGoogleLogonSettings)
         assert_that(logon_settings, not_none())
         assert_that(logon_settings,
-                    has_property('lookup_user_by_email', is_(True)))
+                    has_property('lookup_user_by_email', is_(False)))
         assert_that(logon_settings,
-                    has_property('update_user_on_login', is_(True)))
+                    has_property('lookup_user_by_username', is_(True)))
         assert_that(logon_settings,
-                    has_property('read_only_profile', is_(True)))
+                    has_property('update_user_on_login', is_(False)))
+        assert_that(logon_settings,
+                    has_property('read_only_profile', is_(False)))
         assert_that(logon_settings,
                     has_property('hosted_domains',
                                  contains_inanyorder("nextthought.com", "testdomain.com")))
+
+        request = DummyRequest()
+        ds_folder = Folder()
+        interface.alsoProvides(ds_folder, IDataserverFolder)
+        path_adapter = component.queryMultiAdapter((ds_folder, request),
+                                                   IPathAdapter,
+                                                   name='account.create')
+        assert_that(isinstance(path_adapter, DenyAccountCreatePathAdapter),
+                    is_(False))
+
+        path_adapter = component.queryMultiAdapter((ds_folder, request),
+                                                   IPathAdapter,
+                                                   name='account.preflight.create')
+        assert_that(isinstance(path_adapter, DenyAccountCreatePreflightPathAdapter),
+                    is_(False))

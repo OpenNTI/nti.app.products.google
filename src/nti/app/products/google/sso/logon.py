@@ -12,8 +12,6 @@ from urlparse import urljoin
 from zope import component
 from zope import interface
 
-from zope.cachedescriptors.property import Lazy
-
 from zope.component.hooks import getSite
 
 from zope.event import notify
@@ -28,7 +26,10 @@ from pyramid.view import view_config
 
 from nti.app.externalization.error import validation_error_to_dict
 
+from nti.app.products.google.sso.interfaces import IGoogleUser
 from nti.app.products.google.sso.interfaces import IGoogleLogonSettings
+from nti.app.products.google.sso.interfaces import GoogleUserCreatedEvent
+from nti.app.products.google.sso.interfaces import IGoogleLogonLookupUtility
 
 from nti.app.products.google.sso.utils import set_user_google_id
 from nti.app.products.google.sso.utils import get_user_for_google_id
@@ -37,7 +38,6 @@ from nti.appserver import MessageFactory as _
 
 from nti.appserver.interfaces import IMissingUser
 from nti.appserver.interfaces import ILogonLinkProvider
-from nti.appserver.interfaces import IGoogleLogonLookupUtility
 from nti.appserver.interfaces import IUnauthenticatedUserLinkProvider
 
 from nti.appserver.interfaces import AmbiguousUserLookupError
@@ -53,13 +53,11 @@ from nti.common.string import is_true
 from nti.common.interfaces import IOAuthKeys
 from nti.common.interfaces import IOAuthService
 
-from nti.dataserver.interfaces import IGoogleUser
 from nti.dataserver.interfaces import IDataserverFolder
 
 from nti.dataserver.users.common import user_creation_sitename
 
 from nti.dataserver.users.interfaces import IUserProfile
-from nti.dataserver.users.interfaces import GoogleUserCreatedEvent
 from nti.dataserver.users.interfaces import IUIReadOnlyProfileSchema
 from nti.dataserver.users.interfaces import IUsernameGeneratorUtility
 
@@ -107,15 +105,6 @@ def get_openid_configuration():
 @interface.implementer(IGoogleLogonLookupUtility)
 class GoogleLogonLookupUtility(object):
 
-    @Lazy
-    def lookup_by_external_id(self):
-        """
-        Do we lookup user by email? The default is to lookup
-        via the external identifier.
-        """
-        logon_settings = component.getUtility(IGoogleLogonSettings)
-        return not logon_settings.lookup_user_by_email
-
     def lookup_user_by_email(self, identifier):
         """
         This utility maps the given user identifier as the user's email. We
@@ -153,15 +142,22 @@ class GoogleLogonLookupUtility(object):
         return user
 
     def lookup_user(self, identifier):
-        if self.lookup_by_external_id:
-            result = get_user_for_google_id(identifier)
-        else:
+        logon_settings = component.getUtility(IGoogleLogonSettings)
+        if logon_settings.lookup_user_by_username:
+            result = User.get_user(identifier)
+        elif logon_settings.lookup_user_by_email:
             result = self.lookup_user_by_email(identifier)
+        else:
+            result = get_user_for_google_id(identifier)
         return result
 
-    def generate_username(self, unused_identifier):
-        username_util = component.getUtility(IUsernameGeneratorUtility)
-        result = username_util.generate_username()
+    def generate_username(self, identifier):
+        logon_settings = component.getUtility(IGoogleLogonSettings)
+        if logon_settings.lookup_user_by_username:
+            result = identifier
+        else:
+            username_util = component.getUtility(IUsernameGeneratorUtility)
+            result = username_util.generate_username()
         return result
 
 

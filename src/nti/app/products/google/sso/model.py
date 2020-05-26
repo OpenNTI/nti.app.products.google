@@ -47,4 +47,4 @@ class PersistentGoogleLogonSettings(PersistentCreatedModDateTrackingObject,
                                     AbstractGoogleLogonSettings):
 
     createDirectFieldProperties(IPersistentGoogleLogonSettings)
-    mimeType = mime_type = "application/vnd.nextthought.site.googlelogonsettings"
+    mimeType = mime_type = "application/vnd.nextthought.site.persistentgooglelogonsettings"

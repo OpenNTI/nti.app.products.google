@@ -27,15 +27,17 @@ from zope.event import notify
 
 from nti.appserver.interfaces import ILogonLinkProvider
 from nti.appserver.interfaces import IUnauthenticatedUserLinkProvider
-from nti.appserver.interfaces import IGoogleLogonLookupUtility
-from nti.appserver.interfaces import IGoogleLogonSettings
 
-from nti.appserver.logon import GOOGLE_OAUTH_EXTERNAL_ID_TYPE
-from nti.appserver.logon import GoogleLogonSettings
-from nti.appserver.logon import GoogleLogonLookupUtility
-from nti.appserver.logon import SimpleUnauthenticatedUserGoogleLinkProvider
-from nti.appserver.logon import SimpleMissingUserGoogleLinkProvider
-from nti.appserver.logon import DefaultGoogleLogonLookupUtility
+from nti.app.products.google.sso.interfaces import IGoogleLogonSettings
+from nti.app.products.google.sso.interfaces import IGoogleLogonLookupUtility
+
+from nti.app.products.google.sso.utils import GOOGLE_OAUTH_EXTERNAL_ID_TYPE
+
+from nti.app.products.google.sso.logon import GoogleLogonSettings
+from nti.app.products.google.sso.logon import GoogleLogonLookupUtility
+from nti.app.products.google.sso.logon import SimpleUnauthenticatedUserGoogleLinkProvider
+from nti.app.products.google.sso.logon import SimpleMissingUserGoogleLinkProvider
+from nti.app.products.google.sso.logon import DefaultGoogleLogonLookupUtility
 
 from nti.app.testing.application_webtest import ApplicationLayerTest
 

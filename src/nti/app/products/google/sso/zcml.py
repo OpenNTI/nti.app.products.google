@@ -49,6 +49,10 @@ class IRegisterGoogleLogonSettings(interface.Interface):
                                 default=False,
                                 required=False)
 
+    lookup_user_by_username = Bool(title=u'Whether to lookup a user by username (vs external id)',
+                                   default=False,
+                                   required=False)
+
     update_user_on_login = Bool(title=u'Whether to update user info on login',
                                 default=False,
                                 required=False)
@@ -57,26 +61,29 @@ class IRegisterGoogleLogonSettings(interface.Interface):
                              default=False,
                              required=False)
 
-    hosted_domains = ListOrTuple(ValidTextLine(title=u'Valid hosted domain',
-                                               description=u"Only allow logins if a user's domain matches",
-                                               min_length=1),
-                                 required=False)
+    hosted_domains = ValidTextLine(title=u'Valid hosted domains',
+                                   description=u"Comma separated valid host domains",
+                                   required=False)
 
 
 def registerGoogleLogonSettings(_context,
                                 disable_account_creation,
                                 lookup_user_by_email,
+                                lookup_user_by_username,
                                 update_user_on_login,
                                 read_only_profile,
-                                hosted_domain):
+                                hosted_domains=None):
     """
     Register google logon settings.
     """
+    if hosted_domains:
+        hosted_domains = hosted_domains.split(',')
     factory = functools.partial(GoogleLogonSettings,
                                 lookup_user_by_email=lookup_user_by_email,
+                                lookup_user_by_username=lookup_user_by_username,
                                 update_user_on_login=update_user_on_login,
                                 read_only_profile=read_only_profile,
-                                hosted_domain=text_(hosted_domain))
+                                hosted_domains=hosted_domains)
     utility(_context, provides=IGoogleLogonSettings, factory=factory)
 
     if disable_account_creation:
