@@ -15,8 +15,6 @@ from zope.container.interfaces import ILocation
 
 from nti.app.products.google.sso import ENABLE_GOOGLE_SSO_VIEW
 
-from nti.app.products.google.sso.authorization import ACT_ENABLE_GOOGLE_SSO
-
 from nti.app.products.google.sso.interfaces import IGoogleLogonSettings
 from nti.app.products.google.sso.interfaces import IGoogleSSOIntegration
 from nti.app.products.google.sso.interfaces import IPersistentGoogleLogonSettings

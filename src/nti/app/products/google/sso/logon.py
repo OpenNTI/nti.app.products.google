@@ -30,6 +30,9 @@ from nti.app.externalization.error import validation_error_to_dict
 
 from nti.app.products.google.sso.interfaces import IGoogleLogonSettings
 
+from nti.app.products.google.sso.utils import set_user_google_id
+from nti.app.products.google.sso.utils import get_user_for_google_id
+
 from nti.appserver import MessageFactory as _
 
 from nti.appserver.interfaces import IMissingUser
@@ -65,11 +68,7 @@ from nti.dataserver.users.users import User
 from nti.dataserver.users.utils import get_users_by_email
 from nti.dataserver.users.utils import force_email_verification
 
-from nti.externalization.interfaces import ObjectModifiedFromExternalEvent
-
 from nti.externalization.internalization import update_from_external_object
-
-from nti.identifiers.interfaces import IUserExternalIdentityContainer
 
 from nti.links.links import Link
 
@@ -83,8 +82,6 @@ DEFAULT_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 DEFAULT_TOKEN_URL = 'https://www.googleapis.com/oauth2/v4/token'
 DEFAULT_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 DISCOVERY_DOC_URL = 'https://accounts.google.com/.well-known/openid-configuration'
-
-GOOGLE_OAUTH_EXTERNAL_ID_TYPE = u'google.oauth'
 
 
 def redirect_google_oauth2_uri(request):
@@ -111,10 +108,10 @@ def get_openid_configuration():
 class GoogleLogonLookupUtility(object):
 
     @Lazy
-    def username_is_email(self):
+    def lookup_by_external_id(self):
         """
-        Do we lookup user by email? The alternative is when
-        the username is the email addr.
+        Do we lookup user by email? The default is to lookup
+        via the external identifier.
         """
         logon_settings = component.getUtility(IGoogleLogonSettings)
         return not logon_settings.lookup_user_by_email
@@ -156,23 +153,15 @@ class GoogleLogonLookupUtility(object):
         return user
 
     def lookup_user(self, identifier):
-        if self.username_is_email:
-            result = User.get_user(identifier)
+        if self.lookup_by_external_id:
+            result = get_user_for_google_id(identifier)
         else:
             result = self.lookup_user_by_email(identifier)
-            # When a user login a child site, then login its parent or sibling site with the same GMail,
-            # it would create duplicated users with the same GMail, which may cause a different user returned
-            # when login the child site with that gmail.
-            # fix get_user_for_external_id?
-            #user = get_user_for_external_id(GOOGLE_OAUTH_EXTERNAL_ID_TYPE, identifier)
         return result
 
-    def generate_username(self, identifier):
-        if self.username_is_email:
-            result = identifier
-        else:
-            username_util = component.getUtility(IUsernameGeneratorUtility)
-            result = username_util.generate_username()
+    def generate_username(self, unused_identifier):
+        username_util = component.getUtility(IUsernameGeneratorUtility)
+        result = username_util.generate_username()
         return result
 
 
@@ -339,9 +328,9 @@ def _google_logon_from_user_response(request, user_response_dict):
     email = user_response_dict['email']
 
     logon_settings = component.queryUtility(IGoogleLogonSettings)
-    if logon_settings.hosted_domain:
+    if logon_settings.hosted_domains:
         domain = email.split('@')[1]
-        if logon_settings.hosted_domain != domain:
+        if domain not in logon_settings.hosted_domains:
             return create_failure_response(request,
                                            request.session.get('google.failure'),
                                            error=_(u'Invalid domain.'))
@@ -362,13 +351,7 @@ def _google_logon_from_user_response(request, user_response_dict):
                                           iface=None,
                                           user_factory=User.create_user)
         interface.alsoProvides(user, IGoogleUser)
-        # add external_type / external_id
-        id_container = IUserExternalIdentityContainer(user)
-        id_container.add_external_mapping(GOOGLE_OAUTH_EXTERNAL_ID_TYPE,
-                                          email)
-        logger.info("Setting Google OAUTH for user (%s) (%s)",
-                    user.username, email)
-        notify(ObjectModifiedFromExternalEvent(user))
+        set_user_google_id(user, email)
 
         notify(GoogleUserCreatedEvent(user, request))
         if is_true(email_verified):

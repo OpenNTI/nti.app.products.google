@@ -33,6 +33,7 @@ from nti.common._compat import text_
 from nti.dataserver.interfaces import IDataserverFolder
 
 from nti.schema.field import Bool
+from nti.schema.field import ListOrTuple
 from nti.schema.field import ValidTextLine
 
 logger = __import__('logging').getLogger(__name__)
@@ -44,22 +45,22 @@ class IRegisterGoogleLogonSettings(interface.Interface):
                                     default=True,
                                     required=False)
 
-    lookup_user_by_email = Bool(title=u'Whether to lookup a user by email (vs username)',
-                                default=True,
+    lookup_user_by_email = Bool(title=u'Whether to lookup a user by email (vs external id)',
+                                default=False,
                                 required=False)
 
     update_user_on_login = Bool(title=u'Whether to update user info on login',
-                                default=True,
+                                default=False,
                                 required=False)
 
     read_only_profile = Bool(title=u'Whether the user profile is read-only',
-                             default=True,
+                             default=False,
                              required=False)
 
-    hosted_domain = ValidTextLine(title=u'Valid hosted domain',
-                                  description=u"Only allow logins if a user's domain matches",
-                                  required=False)
-
+    hosted_domains = ListOrTuple(ValidTextLine(title=u'Valid hosted domain',
+                                               description=u"Only allow logins if a user's domain matches",
+                                               min_length=1),
+                                 required=False)
 
 
 def registerGoogleLogonSettings(_context,
@@ -72,7 +73,6 @@ def registerGoogleLogonSettings(_context,
     Register google logon settings.
     """
     factory = functools.partial(GoogleLogonSettings,
-                                disable_account_creation=disable_account_creation,
                                 lookup_user_by_email=lookup_user_by_email,
                                 update_user_on_login=update_user_on_login,
                                 read_only_profile=read_only_profile,
@@ -87,4 +87,3 @@ def registerGoogleLogonSettings(_context,
                     for_=(IDataserverFolder, IRequest),
                     factory=(factory,),
                     provides=IPathAdapter)
-

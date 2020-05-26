@@ -24,6 +24,8 @@ from nti.coremetadata.interfaces import IUser
 from nti.schema import Bool
 from nti.schema import ValidTextLine
 
+from nti.schema.field import ListOrTuple
+
 
 class IGoogleSSOIntegration(IIntegration):
     """
@@ -37,25 +39,22 @@ class IGoogleLogonSettings(interface.Interface):
     settings indicates Google SSO is enabled for the current site.
     """
 
-    disable_account_creation = Bool(title=u'Whether to disable platform account creation',
-                                    default=True,
-                                    required=False)
-
-    lookup_user_by_email = Bool(title=u'Whether to lookup a user by email (vs username)',
-                                default=True,
+    lookup_user_by_email = Bool(title=u'Whether to lookup a user by email (vs external id)',
+                                default=False,
                                 required=False)
 
     update_user_on_login = Bool(title=u'Whether to update user info on login',
-                                default=True,
+                                default=False,
                                 required=False)
 
     read_only_profile = Bool(title=u'Whether the user profile is read-only',
-                             default=True,
+                             default=False,
                              required=False)
 
-    hosted_domain = ValidTextLine(title=u'Valid hosted domain',
-                                  description=u"Only allow logins if a user's domain matches",
-                                  required=False)
+    hosted_domains = ListOrTuple(ValidTextLine(title=u'Valid hosted domain',
+                                               description=u"Only allow logins if a user's domain matches",
+                                               min_length=1),
+                                 required=False)
 
 
 class IPersistentGoogleLogonSettings(IGoogleLogonSettings):
