@@ -33,6 +33,9 @@
                          .interfaces.IPersistentGoogleLogonSettings"
         modules=".model" />
 
+    <!-- Integration -->
+    <utility factory=".integration.GoogleIntegrationProvider" />
+
     <!-- Google logon utilities -->
     <utility factory=".logon.GoogleLogonLookupUtility" />
 
