@@ -34,7 +34,8 @@
         modules=".model" />
 
     <!-- Integration -->
-    <utility factory=".integration.GoogleIntegrationProvider" />
+    <utility factory=".integration.GoogleIntegrationProvider"
+             name="google_sso" />
 
     <!-- Google logon utilities -->
     <utility factory=".logon.GoogleLogonLookupUtility" />
