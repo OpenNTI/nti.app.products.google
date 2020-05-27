@@ -398,6 +398,7 @@ class SimpleUnauthenticatedUserGoogleLinkProvider(object):
         self.request = request
 
     def get_links(self):
+        result = ()
         # Only return logon links if we are configured for google SSO.
         logon_settings = component.queryUtility(IGoogleLogonSettings)
         if logon_settings is not None:
@@ -405,7 +406,8 @@ class SimpleUnauthenticatedUserGoogleLinkProvider(object):
             root = self.request.route_path('objects.generic.traversal',
                                            traverse=())
             root = root[:-1] if root.endswith('/') else root
-            return [Link(root, elements=elements, rel=self.rel)]
+            result = [Link(root, elements=elements, rel=self.rel)]
+        return result
 
 
 @interface.implementer(ILogonLinkProvider)
