@@ -10,12 +10,7 @@ from __future__ import absolute_import
 
 from pyramid import httpexceptions as hexc
 
-from pyramid.interfaces import IRequest
-
 from pyramid.view import view_config
-from pyramid.view import view_defaults
-
-from requests.structures import CaseInsensitiveDict
 
 from zope import component
 
@@ -25,44 +20,66 @@ from zope.component.hooks import getSite
 
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 
+from nti.app.externalization.error import raise_json_error
+
+from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
+
 from nti.app.products.google.sso.interfaces import IGoogleLogonSettings
-from nti.app.products.google.sso.interfaces import IGoogleLogonLookupUtility
+from nti.app.products.google.sso.interfaces import IPersistentGoogleLogonSettings
 
-from nti.app.products.google.sso.logon import GoogleLogonSettings
-from nti.app.products.google.sso.logon import GoogleLogonLookupUtility
-from nti.app.products.google.sso.logon import SimpleMissingUserGoogleLinkProvider
-from nti.app.products.google.sso.logon import SimpleUnauthenticatedUserGoogleLinkProvider
-
-from nti.appserver.interfaces import ILogonLinkProvider
-from nti.appserver.interfaces import IUnauthenticatedUserLinkProvider
-
-from nti.common.string import is_true
+from nti.appserver.ugd_edit_views import UGDPutView
 
 from nti.dataserver import authorization as nauth
 
-from nti.dataserver.interfaces import IMissingUser
 from nti.dataserver.interfaces import IDataserverFolder
+
+from nti.externalization.interfaces import StandardExternalFields
 
 from nti.site import unregisterUtility
 
 from nti.site.localutility import install_utility
 
-
 logger = __import__('logging').getLogger(__name__)
 
+MIMETYPE = StandardExternalFields.MIMETYPE
 
 GOOGLE_LOGON_LOOKUP_NAME = u'GoogleLogonLookupUtility'
 GOOGLE_LOGON_SETTINGS_NAME = u'GoogleLogonSettings'
 
 
-@view_defaults(route_name='objects.generic.traversal',
-               renderer='rest',
-               context=IDataserverFolder,
-               permission=nauth.ACT_NTI_ADMIN)
-class GoogleLogonConfigurationView(AbstractAuthenticatedView):
+def raise_error(data, tb=None,
+                factory=hexc.HTTPUnprocessableEntity,
+                request=None):
+    raise_json_error(request, factory, data, tb)
+
+
+@view_config(route_name='objects.generic.traversal',
+             renderer='rest',
+             context=IDataserverFolder,
+             request_method='POST',
+             name="enable_google_logon",
+             permission=nauth.ACT_NTI_ADMIN)
+class CreateGoogleLogonSettingsView(AbstractAuthenticatedView,
+                                    ModeledContentUploadRequestUtilsMixin):
     """
-    Enable or disable google oauth logon for a site.
+    Enable logon settings.
+
+    How should this work with child sites? Should it always be only enabled
+    for a current site.
     """
+
+    DEFAULT_FACTORY_MIMETYPE = "application/vnd.nextthought.site.persistentgooglelogonsettings"
+
+    def readInput(self, value=None):
+        if self.request.body:
+            values = super(CreateGoogleLogonSettingsView, self).readInput(value)
+        else:
+            values = self.request.params
+        values = dict(values)
+        # Can't be CaseInsensitive with internalization
+        if MIMETYPE not in values:
+            values[MIMETYPE] = self.DEFAULT_FACTORY_MIMETYPE
+        return values
 
     @Lazy
     def site(self):
@@ -72,55 +89,7 @@ class GoogleLogonConfigurationView(AbstractAuthenticatedView):
     def site_manager(self):
         return self.site.getSiteManager()
 
-    def _params(self):
-        """
-        If lookup_by_email is effectively true we would look up user with the email and would use the email as username,
-        otherwise we would look up user with external identity and create a unique random username for the email.
-        """
-        params = CaseInsensitiveDict(self.request.params)
-        params['lookup_by_email'] = is_true(params.get('lookup_by_email'))
-
-        rd = params.get('restricted_domain')
-        params['restricted_domain'] = params['restricted_domain'].strip() or None if rd else None
-        return params
-
-    def _register_missing_user_link_provider(self):
-        self.site_manager.registerSubscriptionAdapter(SimpleMissingUserGoogleLinkProvider,
-                                                      (IMissingUser, IRequest),
-                                                      ILogonLinkProvider)
-
-    def _unregister_missing_user_link_provider(self):
-        self.site_manager.unregisterSubscriptionAdapter(SimpleMissingUserGoogleLinkProvider,
-                                                        (IMissingUser, IRequest),
-                                                        ILogonLinkProvider)
-
-    def _register_unauthenticated_user_link_provider(self):
-        self.site_manager.registerSubscriptionAdapter(SimpleUnauthenticatedUserGoogleLinkProvider,
-                                                      (IRequest,),
-                                                      IUnauthenticatedUserLinkProvider)
-
-    def _unregister_unauthenticated_user_link_provider(self):
-        self.site_manager.unregisterSubscriptionAdapter(SimpleUnauthenticatedUserGoogleLinkProvider,
-                                                        (IRequest,),
-                                                        IUnauthenticatedUserLinkProvider)
-
-    def _get_local_utility(self, iface):
-        obj = component.queryUtility(iface, context=self.site)
-        if obj is None or getattr(obj, '__parent__', None) != self.site_manager:
-            return None
-        return obj
-
-    def _register_lookup_utility(self, lookup_by_email=False):
-        obj = GoogleLogonLookupUtility(lookup_by_email=lookup_by_email)
-        obj.__name__ = GOOGLE_LOGON_LOOKUP_NAME
-        install_utility(obj,
-                        utility_name=obj.__name__,
-                        provided=IGoogleLogonLookupUtility,
-                        local_site_manager=self.site_manager)
-        return obj
-
-    def _register_settings_utility(self, restricted_domain=None):
-        obj = GoogleLogonSettings(restricted_domain)
+    def _register_settings_utility(self, obj):
         obj.__name__ = GOOGLE_LOGON_SETTINGS_NAME
         install_utility(obj,
                         utility_name=obj.__name__,
@@ -128,55 +97,44 @@ class GoogleLogonConfigurationView(AbstractAuthenticatedView):
                         local_site_manager=self.site_manager)
         return obj
 
-    def _unregister_local_utility(self, iface):
-        obj = self._get_local_utility(iface)
+    def _do_call(self):
+        logger.info("Enabling google oauth logon for site (%s) (%s)",
+                    self.site.__name__, self.remoteUser)
+        if component.queryUtility(IGoogleLogonSettings):
+            raise_error({'message': _(u"Google logon settings already exist"),
+                         'code': 'ExistingGoogleLogonSettingsError'})
+        logon_settings = self.readCreateUpdateContentObject(self.remoteUser)
+        self._register_settings_utility(logon_settings)
+        return logon_settings
+
+
+@view_config(route_name='objects.generic.traversal',
+             renderer='rest',
+             context=IPersistentGoogleLogonSettings,
+             request_method='DELETE',
+             permission=nauth.ACT_NTI_ADMIN)
+class DeleteGoogleLogonSettingsView(AbstractAuthenticatedView):
+
+    def __call__(self):
+        logger.info("Disabling google oauth logon for site (%s) (%s)",
+                    self.site.__name__, self.remoteUser)
+                # Can only unregister in current site
+        obj = self._get_local_utility(IGoogleLogonSettings)
         if obj is not None:
             del self.site_manager[obj.__name__]
-            unregisterUtility(self.site_manager, obj, iface)
-
-    @view_config(request_method='POST',
-                 name="enable_google_logon")
-    def enable(self):
-        logger.info("Enabling google oauth logon for site (%s) by username=%s", self.site.__name__, self.remoteUser)
-        params = self._params()
-
-        # Logon lookup utility.
-        lookup = self._get_local_utility(IGoogleLogonLookupUtility)
-        if lookup is None:
-            lookup = self._register_lookup_utility(lookup_by_email=params['lookup_by_email'])
+            unregisterUtility(self.site_manager, obj, IGoogleLogonSettings)
         else:
-            lookup.lookup_by_email = params['lookup_by_email']
-
-        # Logon settings utility.
-        settings = self._get_local_utility(IGoogleLogonSettings)
-        if settings is None:
-            settings = self._register_settings_utility(restricted_domain=params['restricted_domain'])
-        else:
-            settings.hd = params['restricted_domain']
-
-        # Missing user link provider.
-        self._unregister_missing_user_link_provider()
-        self._register_missing_user_link_provider()
-
-        # Unauthenticated user link provider.
-        self._unregister_unauthenticated_user_link_provider()
-        self._register_unauthenticated_user_link_provider()
-
-        return {
-            'lookup_by_email': lookup.lookup_by_email,
-            'restricted_domain': settings.hd
-        }
-
-    @view_config(request_method='POST',
-                 name="disable_google_logon")
-    def disable(self):
-        logger.info("Disabling google oauth logon for site (%s) by username=%s", self.site.__name__, self.remoteUser)
-
-        self._unregister_local_utility(IGoogleLogonLookupUtility)
-
-        self._unregister_local_utility(IGoogleLogonSettings)
-
-        self._unregister_missing_user_link_provider()
-
-        self._unregister_unauthenticated_user_link_provider()
+            # This is also obj != self.context
+            raise_error({'message': _(u"Can only delete logon settings in actual site"),
+                         'code': 'GoogleLogonSettingsDeleteError'})
         return hexc.HTTPNoContent()
+
+
+@view_config(route_name='objects.generic.traversal',
+             context=IPersistentGoogleLogonSettings,
+             request_method='PUT',
+             permission=nauth.ACT_NTI_ADMIN,
+             renderer='rest')
+class GoogleLogonSettingsPutView(UGDPutView):
+    pass
+

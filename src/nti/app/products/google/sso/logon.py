@@ -105,7 +105,7 @@ def get_openid_configuration():
 @interface.implementer(IGoogleLogonLookupUtility)
 class GoogleLogonLookupUtility(object):
     """
-    A default logon lookup utility that utilizes the external identifier.
+    The default logon lookup utility that utilizes the external identifier.
     """
 
     def lookup_user(self, identifier):
@@ -119,6 +119,10 @@ class GoogleLogonLookupUtility(object):
 
 @interface.implementer(IGoogleLogonLookupUtility)
 class GoogleLogonLookupByEmailUtility(object):
+    """
+    A logon lookup utility that does so by email. This can lead to ambiguous
+    results and should only be used for legacy cases.
+    """
 
     def lookup_user(self, identifier):
         """
@@ -164,6 +168,9 @@ class GoogleLogonLookupByEmailUtility(object):
 
 @interface.implementer(IGoogleLogonLookupUtility)
 class GoogleLogonLookupByUsernameUtility(object):
+    """
+    A logon lookup utility that does so matching the email to a username.
+    """
 
     def lookup_user(self, identifier):
         return User.get_user(identifier)

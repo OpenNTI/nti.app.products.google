@@ -48,4 +48,14 @@
     <subscriber factory=".logon.SimpleUnauthenticatedUserGoogleLinkProvider"
                 provides="nti.appserver.interfaces.IUnauthenticatedUserLinkProvider" />
 
+    <!-- Decorators -->
+    <subscriber factory=".decorators._GoogleSSOIntegrationDecorator"
+                provides="nti.externalization.interfaces.IExternalMappingDecorator"
+                for=".interfaces.IGoogleSSOIntegration
+                     pyramid.interfaces.IRequest" />
+
+    <subscriber factory=".decorators._GoogleLogonSettingsDecorator"
+                provides="nti.externalization.interfaces.IExternalMappingDecorator"
+                for=".interfaces.IPersistentGoogleLogonSettings
+                     pyramid.interfaces.IRequest" />
 </configure>
