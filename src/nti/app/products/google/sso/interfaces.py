@@ -38,14 +38,6 @@ class IGoogleLogonSettings(interface.Interface):
     settings indicates Google SSO is enabled for the current site.
     """
 
-    lookup_user_by_email = Bool(title=u'Whether to lookup a user by email (vs external id)',
-                                default=False,
-                                required=False)
-
-    lookup_user_by_username = Bool(title=u'Whether to lookup a user by username (vs external id)',
-                                   default=False,
-                                   required=False)
-
     update_user_on_login = Bool(title=u'Whether to update user info on login',
                                 default=False,
                                 required=False)

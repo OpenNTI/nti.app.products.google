@@ -54,8 +54,6 @@ ZCML_STRING = """
 
     <configure>
         <google:registerGoogleLogonSettings disable_account_creation="true"
-                                            lookup_user_by_username="false"
-                                            lookup_user_by_email="true"
                                             update_user_on_login="true"
                                             read_only_profile="true" />
 
@@ -82,8 +80,6 @@ ZCML_STRING_DOMAINS = """
 
     <configure>
         <google:registerGoogleLogonSettings disable_account_creation="false"
-                                            lookup_user_by_email="false"
-                                            lookup_user_by_username="true"
                                             update_user_on_login="false"
                                             read_only_profile="false"
                                             hosted_domains="nextthought.com,testdomain.com" />
@@ -104,10 +100,6 @@ class TestZcml(nti.testing.base.ConfiguringTestBase):
         self.configure_string(ZCML_STRING)
         logon_settings = component.queryUtility(IGoogleLogonSettings)
         assert_that(logon_settings, not_none())
-        assert_that(logon_settings,
-                    has_property('lookup_user_by_email', is_(True)))
-        assert_that(logon_settings,
-                    has_property('lookup_user_by_username', is_(False)))
         assert_that(logon_settings,
                     has_property('update_user_on_login', is_(True)))
         assert_that(logon_settings,
@@ -150,10 +142,6 @@ class TestZcml(nti.testing.base.ConfiguringTestBase):
         self.configure_string(ZCML_STRING_DOMAINS)
         logon_settings = component.queryUtility(IGoogleLogonSettings)
         assert_that(logon_settings, not_none())
-        assert_that(logon_settings,
-                    has_property('lookup_user_by_email', is_(False)))
-        assert_that(logon_settings,
-                    has_property('lookup_user_by_username', is_(True)))
         assert_that(logon_settings,
                     has_property('update_user_on_login', is_(False)))
         assert_that(logon_settings,

@@ -104,8 +104,23 @@ def get_openid_configuration():
 
 @interface.implementer(IGoogleLogonLookupUtility)
 class GoogleLogonLookupUtility(object):
+    """
+    A default logon lookup utility that utilizes the external identifier.
+    """
 
-    def lookup_user_by_email(self, identifier):
+    def lookup_user(self, identifier):
+        return get_user_for_google_id(identifier)
+
+    def generate_username(self, unused_identifier):
+        username_util = component.getUtility(IUsernameGeneratorUtility)
+        result = username_util.generate_username()
+        return result
+
+
+@interface.implementer(IGoogleLogonLookupUtility)
+class GoogleLogonLookupByEmailUtility(object):
+
+    def lookup_user(self, identifier):
         """
         This utility maps the given user identifier as the user's email. We
         Only return users for the given site; thus, a user with accounts in
@@ -141,24 +156,20 @@ class GoogleLogonLookupUtility(object):
             user = users[0]
         return user
 
-    def lookup_user(self, identifier):
-        logon_settings = component.getUtility(IGoogleLogonSettings)
-        if logon_settings.lookup_user_by_username:
-            result = User.get_user(identifier)
-        elif logon_settings.lookup_user_by_email:
-            result = self.lookup_user_by_email(identifier)
-        else:
-            result = get_user_for_google_id(identifier)
+    def generate_username(self, unused_identifier):
+        username_util = component.getUtility(IUsernameGeneratorUtility)
+        result = username_util.generate_username()
         return result
 
+
+@interface.implementer(IGoogleLogonLookupUtility)
+class GoogleLogonLookupByUsernameUtility(object):
+
+    def lookup_user(self, identifier):
+        return User.get_user(identifier)
+
     def generate_username(self, identifier):
-        logon_settings = component.getUtility(IGoogleLogonSettings)
-        if logon_settings.lookup_user_by_username:
-            result = identifier
-        else:
-            username_util = component.getUtility(IUsernameGeneratorUtility)
-            result = username_util.generate_username()
-        return result
+        return identifier
 
 
 def _get_google_hosted_domain():

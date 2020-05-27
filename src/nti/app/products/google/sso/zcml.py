@@ -28,12 +28,9 @@ from nti.app.products.google.sso.model import GoogleLogonSettings
 from nti.appserver.account_creation_views import DenyAccountCreatePathAdapter
 from nti.appserver.account_creation_views import DenyAccountCreatePreflightPathAdapter
 
-from nti.common._compat import text_
-
 from nti.dataserver.interfaces import IDataserverFolder
 
 from nti.schema.field import Bool
-from nti.schema.field import ListOrTuple
 from nti.schema.field import ValidTextLine
 
 logger = __import__('logging').getLogger(__name__)
@@ -44,14 +41,6 @@ class IRegisterGoogleLogonSettings(interface.Interface):
     disable_account_creation = Bool(title=u'Whether to disable platform account creation',
                                     default=True,
                                     required=False)
-
-    lookup_user_by_email = Bool(title=u'Whether to lookup a user by email (vs external id)',
-                                default=False,
-                                required=False)
-
-    lookup_user_by_username = Bool(title=u'Whether to lookup a user by username (vs external id)',
-                                   default=False,
-                                   required=False)
 
     update_user_on_login = Bool(title=u'Whether to update user info on login',
                                 default=False,
@@ -68,8 +57,6 @@ class IRegisterGoogleLogonSettings(interface.Interface):
 
 def registerGoogleLogonSettings(_context,
                                 disable_account_creation,
-                                lookup_user_by_email,
-                                lookup_user_by_username,
                                 update_user_on_login,
                                 read_only_profile,
                                 hosted_domains=None):
@@ -79,8 +66,6 @@ def registerGoogleLogonSettings(_context,
     if hosted_domains:
         hosted_domains = hosted_domains.split(',')
     factory = functools.partial(GoogleLogonSettings,
-                                lookup_user_by_email=lookup_user_by_email,
-                                lookup_user_by_username=lookup_user_by_username,
                                 update_user_on_login=update_user_on_login,
                                 read_only_profile=read_only_profile,
                                 hosted_domains=hosted_domains)
