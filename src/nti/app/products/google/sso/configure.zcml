@@ -30,8 +30,9 @@
     <include package="nti.externalization" />
     <ext:registerAutoPackageIO
         root_interfaces=".interfaces.IGoogleLogonSettings
-                         .interfaces.IPersistentGoogleLogonSettings"
-        modules=".model" />
+                         .interfaces.IPersistentGoogleLogonSettings
+                         .interfaces.IGoogleSSOIntegration"
+        modules=".model .integration" />
 
     <!-- Integration -->
     <utility factory=".integration.GoogleIntegrationProvider"
