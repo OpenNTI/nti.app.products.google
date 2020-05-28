@@ -321,7 +321,7 @@ def google_oauth2(request):
                                             request.session.get('google.failure'),
                                             error=_(u'Invalid access token.'))
         profile = response.json()
-        response = _google_logon_from_user_response(profile)
+        response = google_logon_from_user_response(profile)
     except Exception as e:
         logger.exception('Failed to login with google')
         response = create_failure_response(request,
@@ -330,7 +330,7 @@ def google_oauth2(request):
     return response
 
 
-def _google_logon_from_user_response(request, user_response_dict):
+def google_logon_from_user_response(request, user_response_dict):
     """
     From a user response dict, handle the account lookup/provisioning/update.
     """
