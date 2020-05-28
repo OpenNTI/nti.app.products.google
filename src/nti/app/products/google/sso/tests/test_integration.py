@@ -39,6 +39,9 @@ class TestIntegration(ApplicationLayerTest):
 
     @WithSharedApplicationMockDS(users=True, testapp=True)
     def test_integration(self):
+        """
+        Test enabling and disabling google sso, as well as editing state.
+        """
         admin_username = 'google_int@nextthought.com'
         site_admin_username = 'google_sso_site_admin'
         with mock_dataserver.mock_db_trans(self.ds):
@@ -102,16 +105,9 @@ class TestIntegration(ApplicationLayerTest):
         res = unauth_testapp.get('/dataserver2/logon.ping',
                                  extra_environ={'HTTP_ORIGIN': self.default_origin})
         self.require_link_href_with_rel(res.json_body, u'logon.google')
-#         assert_that( res.json_body, has_key( 'Links' ) )
-#
-#         link_rels = [l['rel'] for l in res.json_body['Links']]
-#         assert_that( link_rels, has_item( 'account.create' ) )
-#         assert_that( link_rels, has_item( 'account.preflight.create' ) )
+
         # TODO
         # site admin should not have rels
-        # disabling
-        # logging in - fudging
-        # account creation
 
         # Disabling
         google_int = _get_google_int(admin_username, admin_env)
@@ -120,3 +116,11 @@ class TestIntegration(ApplicationLayerTest):
         self.testapp.delete(disable_href, extra_environ=admin_env)
         self.testapp.get(settings_href, extra_environ=admin_env, status=404)
 
+        unauth_testapp = TestApp(self.app)
+        res = unauth_testapp.get('/dataserver2/logon.ping',
+                                 extra_environ={'HTTP_ORIGIN': self.default_origin})
+        self.forbid_link_with_rel(res.json_body, u'logon.google')
+
+        google_int = _get_google_int(admin_username, admin_env)
+        assert_that(google_int, not_none())
+        self.require_link_href_with_rel(google_int, 'enable')
