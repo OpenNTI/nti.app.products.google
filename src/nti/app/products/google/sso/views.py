@@ -24,8 +24,12 @@ from nti.app.externalization.error import raise_json_error
 
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
+from nti.app.products.google import MessageFactory as _
+
 from nti.app.products.google.sso.interfaces import IGoogleLogonSettings
 from nti.app.products.google.sso.interfaces import IPersistentGoogleLogonSettings
+
+from nti.appserver.dataserver_pyramid_views import GenericGetView
 
 from nti.appserver.ugd_edit_views import UGDPutView
 
@@ -57,7 +61,7 @@ def raise_error(data, tb=None,
              renderer='rest',
              context=IDataserverFolder,
              request_method='POST',
-             name="enable_google_logon",
+             name="EnableGoogleSSO",
              permission=nauth.ACT_NTI_ADMIN)
 class CreateGoogleLogonSettingsView(AbstractAuthenticatedView,
                                     ModeledContentUploadRequestUtilsMixin):
@@ -115,18 +119,25 @@ class CreateGoogleLogonSettingsView(AbstractAuthenticatedView,
              permission=nauth.ACT_NTI_ADMIN)
 class DeleteGoogleLogonSettingsView(AbstractAuthenticatedView):
 
+    @Lazy
+    def site(self):
+        return getSite()
+
+    @Lazy
+    def site_manager(self):
+        return self.site.getSiteManager()
+
     def __call__(self):
         logger.info("Disabling google oauth logon for site (%s) (%s)",
                     self.site.__name__, self.remoteUser)
-                # Can only unregister in current site
-        obj = self._get_local_utility(IGoogleLogonSettings)
-        if obj is not None:
-            del self.site_manager[obj.__name__]
-            unregisterUtility(self.site_manager, obj, IGoogleLogonSettings)
-        else:
-            # This is also obj != self.context
+        # Can only unregister in current site
+        if getattr(self.context, '__parent__', None) != self.site_manager:
             raise_error({'message': _(u"Can only delete logon settings in actual site"),
                          'code': 'GoogleLogonSettingsDeleteError'})
+        del self.site_manager[self.context.__name__]
+        unregisterUtility(self.site_manager,
+                          self.context,
+                          IGoogleLogonSettings)
         return hexc.HTTPNoContent()
 
 
@@ -138,3 +149,11 @@ class DeleteGoogleLogonSettingsView(AbstractAuthenticatedView):
 class GoogleLogonSettingsPutView(UGDPutView):
     pass
 
+
+@view_config(route_name='objects.generic.traversal',
+             context=IPersistentGoogleLogonSettings,
+             request_method='GET',
+             permission=nauth.ACT_NTI_ADMIN,
+             renderer='rest')
+class GoogleLogonSettingsGetView(GenericGetView):
+    pass

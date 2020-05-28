@@ -85,7 +85,8 @@ class _GoogleLogonSettingsDecorator(AbstractAuthenticatedRequestAwareDecorator):
     def _do_decorate_external(self, context, result):
         links = result.setdefault(LINKS, [])
         link = Link(context,
-                    method='DELETE')
+                    method='DELETE',
+                    rel='delete')
         edit_link = Link(context,
                          method='PUT',
                          rel='edit')
