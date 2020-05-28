@@ -373,8 +373,8 @@ def google_logon_from_user_response(request, user_response_dict):
 
     user_profile = IUserProfile(user)
 
-#     if logon_settings.read_only_profile:
-#         interface.alsoProvides(user_profile, IUIReadOnlyProfileSchema)
+    if logon_settings.read_only_profile:
+        interface.alsoProvides(user_profile, IUIReadOnlyProfileSchema)
 
     if logon_settings.update_user_on_login:
         external_values = {u'email': email,

@@ -19,8 +19,6 @@ from zope.interface.interfaces import IObjectEvent
 
 from nti.app.products.integration.interfaces import IIntegration
 
-from nti.coremetadata.interfaces import IUser
-
 from nti.schema.field import Bool
 from nti.schema.field import ListOrTuple
 from nti.schema.field import ValidTextLine
@@ -89,7 +87,10 @@ class GoogleUserCreatedEvent(ObjectEvent):
         self.request = request
 
 
-class IGoogleUser(IUser):
+class IGoogleUser(interface.Interface):
     """
     A marker interface for a google user.
     """
+
+IGoogleUser.setTaggedValue('_ext_is_marker_interface', True)
+
