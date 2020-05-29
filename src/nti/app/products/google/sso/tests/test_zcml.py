@@ -35,11 +35,12 @@ from nti.appserver.account_creation_views import DenyAccountCreatePreflightPathA
 from nti.appserver.interfaces import ILogonLinkProvider
 from nti.appserver.interfaces import IUnauthenticatedUserLinkProvider
 
+from nti.appserver.logon import NoSuchUser
+
 from nti.dataserver.interfaces import IDataserverFolder
 
-from nti.dataserver.users.missing_user import MissingUser
-
 import nti.testing.base
+
 
 ZCML_STRING = """
 <configure  xmlns="http://namespaces.zope.org/zope"
@@ -123,17 +124,17 @@ class TestZcml(nti.testing.base.ConfiguringTestBase):
         assert_that(isinstance(path_adapter, DenyAccountCreatePreflightPathAdapter),
                     is_(True))
 
-        missing_user = MissingUser('test')
+        missing_user = NoSuchUser('test')
         link_providers = component.subscribers((request,),
                                                IUnauthenticatedUserLinkProvider)
         user_links = [x for x in link_providers if isinstance(x, SimpleUnauthenticatedUserGoogleLinkProvider)]
         assert_that(user_links, has_length(1))
 
-#         from IPython.terminal.debugger import set_trace;set_trace()
-#         link_providers = component.subscribers((missing_user, request), ILogonLinkProvider)
-#         from IPython.terminal.debugger import set_trace;set_trace()
-#         user_links = [x for x in link_providers if isinstance(x, SimpleMissingUserGoogleLinkProvider)]
-#         assert_that(user_links, has_length(1))
+        link_providers = component.subscribers((missing_user, request),
+                                               ILogonLinkProvider)
+        user_links = [x for x in link_providers
+                      if isinstance(x, SimpleMissingUserGoogleLinkProvider)]
+        assert_that(user_links, has_length(1))
 
     def test_settings_with_domains(self):
         """
