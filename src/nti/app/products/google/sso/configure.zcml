@@ -63,4 +63,19 @@
                 provides="nti.externalization.interfaces.IExternalMappingDecorator"
                 for=".interfaces.IPersistentGoogleLogonSettings
                      pyramid.interfaces.IRequest" />
+
+    <!-- Security -->
+    <adapter factory=".acl._GoogleLogonSettingsACLProvider"
+             for=".interfaces.IGoogleLogonSettings"
+             provides="nti.dataserver.interfaces.IACLProvider"/>
+
+    <adapter factory=".acl._GoogleSSOIntegrationACLProvider"
+             for=".interfaces.IGoogleSSOIntegration"
+             provides="nti.dataserver.interfaces.IACLProvider"/>
+
+    <adapter factory=".zope_security.GoogleSSOIntegrationRolePermissionManager"
+             provides="zope.securitypolicy.interfaces.IRolePermissionMap" />
+
+    <adapter factory=".zope_security.GoogleLogonSettingsRolePermissionManager"
+             provides="zope.securitypolicy.interfaces.IRolePermissionMap" />
 </configure>

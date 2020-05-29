@@ -53,6 +53,7 @@ class TestIntegration(ApplicationLayerTest):
 
         admin_env = self._make_extra_environ(admin_username)
         site_admin_env = self._make_extra_environ(site_admin_username)
+
         def _get_google_int(username, env):
             url = "/dataserver2/users/%s/Integration/Integrations" % username
             res = self.testapp.get(url, extra_environ=env)
@@ -60,12 +61,17 @@ class TestIntegration(ApplicationLayerTest):
             google_int = next((x for x in res['Items'] if x.get('Class') == 'GoogleSSOIntegration'), None)
             return google_int
 
-        assert_that(_get_google_int(site_admin_username, site_admin_env), not_none())
+        # Site admin does not have rels
+        google_int = _get_google_int(site_admin_username, site_admin_env)
+        assert_that(google_int, not_none())
+        self.forbid_link_with_rel(google_int, 'enable')
+
         google_int = _get_google_int(admin_username, admin_env)
         assert_that(google_int, not_none())
         enable_href = self.require_link_href_with_rel(google_int, 'enable')
 
         # Enable integration
+        self.testapp.post(enable_href, extra_environ=site_admin_env, status=403)
         logon_settings = self.testapp.post(enable_href,
                                            extra_environ=admin_env)
         logon_settings = logon_settings.json_body
@@ -106,13 +112,19 @@ class TestIntegration(ApplicationLayerTest):
                                  extra_environ={'HTTP_ORIGIN': self.default_origin})
         self.require_link_href_with_rel(res.json_body, u'logon.google')
 
-        # TODO
-        # site admin should not have rels
-
         # Disabling
+        google_int = _get_google_int(site_admin_username, site_admin_env)
+        assert_that(google_int, not_none())
+        self.forbid_link_with_rel(google_int, 'disable')
+
         google_int = _get_google_int(admin_username, admin_env)
         assert_that(google_int, not_none())
         disable_href = self.require_link_href_with_rel(google_int, 'disable')
+
+        # Site admin 403s
+        self.testapp.delete(disable_href, extra_environ=site_admin_env, status=403)
+        self.testapp.get(settings_href, extra_environ=site_admin_env, status=403)
+
         self.testapp.delete(disable_href, extra_environ=admin_env)
         self.testapp.get(settings_href, extra_environ=admin_env, status=404)
 

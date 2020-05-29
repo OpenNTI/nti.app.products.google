@@ -11,7 +11,11 @@ from hamcrest import not_none
 from hamcrest import assert_that
 
 import pyramid.interfaces
+
 import pyramid.httpexceptions as hexc
+
+from pyramid.interfaces import IAuthorizationPolicy
+from pyramid.interfaces import IAuthenticationPolicy
 
 from zope import component
 from zope import interface
@@ -28,6 +32,8 @@ from nti.app.testing.application_webtest import ApplicationLayerTest
 
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 
+from nti.appserver.pyramid_authorization import ZopeACLAuthorizationPolicy
+
 from nti.dataserver.users import User
 
 from nti.dataserver.users.interfaces import IFriendlyNamed
@@ -39,13 +45,10 @@ from nti.site.localutility import install_utility
 
 class TestGoogleSSO(ApplicationLayerTest):
 
-    @WithSharedApplicationMockDS
-    def test_google_sso(self):
-        logon_settings = GoogleLogonSettings(hosted_domains=[],
-                                             read_only_profile=False,
-                                             update_user_on_login=False)
-        logon_settings.__name__ = GOOGLE_LOGON_SETTINGS_NAME
-        request = self.request
+    def setUp(self):
+        super(TestGoogleSSO, self).setUp()
+        self.__policy = component.queryUtility(IAuthenticationPolicy)
+        self.__acl_policy = component.queryUtility(IAuthorizationPolicy)
 
         class Policy(object):
             interface.implements(pyramid.interfaces.IAuthenticationPolicy)
@@ -54,9 +57,31 @@ class TestGoogleSSO(ApplicationLayerTest):
             def authenticated_userid(self, request):
                 return 'google_sso_userid'
             def effective_principals(self, request):
-                return [self.authenticated_userid(request)]
+                return frozenset([self.authenticated_userid(request)])
             def forget(self, *args, **kwargs):
                 pass
+
+        self.policy = Policy()
+        component.provideUtility(self.policy)
+        self.acl_policy = ZopeACLAuthorizationPolicy()
+        component.provideUtility(self.acl_policy)
+
+    def tearDown(self):
+        component.getGlobalSiteManager().unregisterUtility(self.policy)
+        component.getGlobalSiteManager().unregisterUtility(self.acl_policy)
+        if self.__policy:
+            component.provideUtility(self.__policy)
+        if self.__acl_policy:
+            component.provideUtility(self.__acl_policy)
+        super(TestGoogleSSO, self).tearDown()
+
+    @WithSharedApplicationMockDS
+    def test_google_sso(self):
+        logon_settings = GoogleLogonSettings(hosted_domains=[],
+                                             read_only_profile=False,
+                                             update_user_on_login=False)
+        logon_settings.__name__ = GOOGLE_LOGON_SETTINGS_NAME
+        request = self.request
 
         user_response_dict = {u'given_name': u'user_first_name',
                               u'family_name': u'user_last_name',
@@ -68,7 +93,6 @@ class TestGoogleSSO(ApplicationLayerTest):
                             local_site_manager=component.getSiteManager())
             request.environ['HTTP_HOST'] = 'mathcounts.nextthought.com'
             request.environ['HTTP_ORIGIN'] = 'https://mathcounts.nextthought.com'
-            request.registry.registerUtility(Policy())
 
             res = google_logon_from_user_response(request, user_response_dict)
             assert_that(res, is_(hexc.HTTPNoContent))
