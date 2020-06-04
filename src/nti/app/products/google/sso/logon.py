@@ -309,12 +309,12 @@ def google_oauth2(request):
         data = response.json()
         if 'access_token' not in data:
             return create_failure_response(request,
-                                            request.session.get('google.failure'),
-                                            error=_(u'Could not find access token.'))
+                                           request.session.get('google.failure'),
+                                           error=_(u'Could not find access token.'))
         if 'id_token' not in data:
             return create_failure_response(request,
-                                            request.session.get('google.failure'),
-                                            error=_(u'Could not find id token.'))
+                                           request.session.get('google.failure'),
+                                           error=_(u'Could not find id token.'))
 
         # id_token = data['id_token'] #TODO:Validate id token
         access_token = data['access_token']
@@ -324,15 +324,15 @@ def google_oauth2(request):
                                 "access_token": access_token})
         if response.status_code != 200:
             return create_failure_response(request,
-                                            request.session.get('google.failure'),
-                                            error=_(u'Invalid access token.'))
+                                           request.session.get('google.failure'),
+                                           error=_(u'Invalid access token.'))
         profile = response.json()
-        response = google_logon_from_user_response(profile)
+        response = google_logon_from_user_response(request, profile)
     except Exception as e:
         logger.exception('Failed to login with google')
         response = create_failure_response(request,
-                                            request.session.get('google.failure'),
-                                            error=str(e))
+                                           request.session.get('google.failure'),
+                                           error=str(e))
     return response
 
 
