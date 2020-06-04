@@ -180,10 +180,16 @@ class GoogleLogonLookupByUsernameUtility(object):
 
 
 def _get_google_hosted_domain():
+    """
+    This param just optimizes the UI experience. If we have more than
+    one hosted domains, verify upon authentication.
+    """
     hosted_domain = None
-    login_config = component.queryUtility(IGoogleLogonSettings)
-    if login_config is not None:
-        hosted_domain = login_config.hd
+    logon_settings = component.queryUtility(IGoogleLogonSettings)
+    if      logon_settings is not None \
+        and logon_settings.hosted_domains \
+        and len(logon_settings.hosted_domains) == 1:
+        hosted_domain = logon_settings.hosted_domains[0]
     return hosted_domain
 
 
