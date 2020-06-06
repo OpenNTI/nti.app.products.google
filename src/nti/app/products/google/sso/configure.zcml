@@ -41,12 +41,6 @@
     <!-- Google logon utilities -->
     <utility factory=".logon.GoogleLogonLookupUtility" />
 
-    <include package="nti.common" file="meta.zcml" />
-    <oauth:registerOAuthKeys
-            apiKey="1064987854606-icq7g16jjv4e1q6lrd41n016180cm5ei.apps.googleusercontent.com"
-            secretKey="BFRMQ2BYSQRXH0NqGBAkWhY9bBF9F1Ve"
-            id="google" />
-
     <subscriber factory=".logon.SimpleMissingUserGoogleLinkProvider"
                 provides="nti.appserver.interfaces.ILogonLinkProvider" />
 
