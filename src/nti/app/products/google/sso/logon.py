@@ -328,6 +328,9 @@ def google_oauth2(request):
                                            error=_(u'Invalid access token.'))
         profile = response.json()
         response = google_logon_from_user_response(request, profile)
+    except hexc.HTTPError:
+        logger.exception('Failed to login with google')
+        raise
     except Exception as e:
         logger.exception('Failed to login with google')
         response = create_failure_response(request,
