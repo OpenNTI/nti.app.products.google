@@ -129,7 +129,7 @@ def google_oauth_authorize(request):
     params = request.params
     scopes = [s for s in params.get('scope').split(' ') if s]
     return initiate_oauth_flow(request,
-                               request.resource_url(request.context)+'@@google.oauth.authorize2',
+                               request.resource_url(request.context, '@@google.oauth.authorize2'),
                                success=params.get('success'),
                                failure=params.get('failure'),
                                scopes=scopes,
