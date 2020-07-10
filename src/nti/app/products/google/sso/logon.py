@@ -26,6 +26,10 @@ from pyramid.view import view_config
 
 from nti.app.externalization.error import validation_error_to_dict
 
+from nti.app.products.google.oauth.views import initiate_oauth_flow
+from nti.app.products.google.oauth.views import DEFAULT_TOKEN_URL
+from nti.app.products.google.oauth.views import exchange_code_for_token
+
 from nti.app.products.google.sso.interfaces import IGoogleUser
 from nti.app.products.google.sso.interfaces import IGoogleLogonSettings
 from nti.app.products.google.sso.interfaces import GoogleUserCreatedEvent
@@ -76,8 +80,6 @@ REL_LOGIN_GOOGLE = 'logon.google'
 
 OPENID_CONFIGURATION = None
 LOGON_GOOGLE_OAUTH2 = 'logon.google.oauth2'
-DEFAULT_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
-DEFAULT_TOKEN_URL = 'https://www.googleapis.com/oauth2/v4/token'
 DEFAULT_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 DISCOVERY_DOC_URL = 'https://accounts.google.com/.well-known/openid-configuration'
 
@@ -204,27 +206,13 @@ def google_oauth1(request, success=None, failure=None, state=None):
     if hosted_domain:
         params['hd'] = hosted_domain
 
-    for key, value in (('success', success), ('failure', failure)):
-        value = value or request.params.get(key)
-        if value:
-            request.session['google.' + key] = value
-
-    # redirect
-    auth_svc = component.getUtility(IOAuthService, name="google")
-    target = auth_svc.authorization_request_uri(
-        client_id=component.getUtility(IOAuthKeys, name="google").APIKey,
-        response_type='code',
-        scope='openid email profile',
-        redirect_uri=_redirect_uri(request),
-        state=state,
-        **params
-    )
-
-    # save state for validation
-    request.session['google.state'] = auth_svc.params['state']
-
-    response = hexc.HTTPSeeOther(location=target)
-    return response
+    return initiate_oauth_flow(request,
+                               _redirect_uri(request),
+                               scopes=['openid', 'email', 'profile'],
+                               success=success,
+                               failure=failure,
+                               state=state,
+                               params=params)
 
 
 def _update_profile(request, profile, external_values):
@@ -257,56 +245,11 @@ def _can_create_google_oath_user():
              request_method='GET',
              renderer='rest')
 def google_oauth2(request):
-    params = request.params
-    auth_keys = component.getUtility(IOAuthKeys, name="google")
-
-    # check for errors
-    if 'error' in params or 'errorCode' in params:
-        error = params.get('error') or params.get('errorCode')
-        return create_failure_response(request,
-                                        request.session.get('google.failure'),
-                                        error=error)
-
-    # Confirm code
-    if 'code' not in params:
-        return create_failure_response(request,
-                                        request.session.get('google.failure'),
-                                        error=_(u'Could not find code parameter.'))
-    code = params.get('code')
-
-    # Confirm anti-forgery state token
-    if 'state' not in params:
-        return create_failure_response(request,
-                                        request.session.get('google.failure'),
-                                        error=_(u'Could not find state parameter.'))
-    params_state = params.get('state')
-    session_state = request.session.get('google.state')
-    if params_state != session_state:
-        return create_failure_response(request,
-                                        request.session.get('google.failure'),
-                                        error=_(u'Incorrect state values.'))
-
-    # Exchange code for access token and ID token
-    config = get_openid_configuration()
-    token_url = config.get('token_endpoint', DEFAULT_TOKEN_URL)
-
     try:
-        # Check for redirect url override (e.g. via the OAuth portal)
-        redirect_uri = params.get('_redirect_uri')
+        config = get_openid_configuration()
+        token_url = config.get('token_endpoint', DEFAULT_TOKEN_URL)
+        data = exchange_code_for_token(request, token_url=token_url)
 
-        data = {'code': code,
-                'client_id': auth_keys.APIKey,
-                'grant_type': 'authorization_code',
-                'client_secret': auth_keys.SecretKey,
-                'redirect_uri': redirect_uri or _redirect_uri(request)}
-        response = requests.post(token_url, data)
-        if response.status_code != 200:
-            return create_failure_response(
-                request,
-                request.session.get('google.failure'),
-                error=_('Invalid response while getting access token.'))
-
-        data = response.json()
         if 'access_token' not in data:
             return create_failure_response(request,
                                            request.session.get('google.failure'),
