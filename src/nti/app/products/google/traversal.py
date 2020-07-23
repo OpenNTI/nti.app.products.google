@@ -10,14 +10,15 @@ from nti.dataserver.authorization_acl import ace_allowing
 
 from nti.dataserver.interfaces import AUTHENTICATED_GROUP_NAME
 
-from nti.app.products.google.interfaces import IAPIKey
-from nti.app.products.google.interfaces import IGoogleApiKeys
+from nti.app.products.google.interfaces import IGoogleAPIKey
+from nti.app.products.google.interfaces import IGoogleAPIKeys
 
-@interface.implementer(IAPIKey)
-class APIKey(object):
+
+@interface.implementer(IGoogleAPIKey)
+class GoogleAPIKey(object):
 
     __name__ = None
-    
+
     key = None
     appid = None
 
@@ -27,13 +28,13 @@ class APIKey(object):
         self.appid = appid
 
 
-@interface.implementer(IGoogleApiKeys)
-class GoogleApiKeys(object):
+@interface.implementer(IGoogleAPIKeys)
+class GoogleAPIKeys(object):
 
     __name__ = 'googleapikeys'
 
     def __getitem__(self, key):
-        return component.queryUtility(IAPIKey, name=key)
+        return component.queryUtility(IGoogleAPIKey, name=key)
 
     @Lazy
     def __acl__(self):

@@ -4,7 +4,8 @@ from zope.traversing.interfaces import IEtcNamespace
 
 from nti.schema.field import ValidTextLine
 
-class IAPIKey(interface.Interface):
+
+class IGoogleAPIKey(interface.Interface):
 
     key = ValidTextLine(title=u'The API key',
                         required=True)
@@ -12,7 +13,8 @@ class IAPIKey(interface.Interface):
     appid = ValidTextLine(title=u'The name for this key',
                           required=True)
 
-class IGoogleApiKeys(IEtcNamespace):
+
+class IGoogleAPIKeys(IEtcNamespace):
     """
-    A traversal namespace that looks up IAPIKeys by name
+    A traversal namespace that looks up :class:`IGoogleAPIKey` by name
     """

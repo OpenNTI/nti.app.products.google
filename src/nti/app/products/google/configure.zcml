@@ -17,11 +17,11 @@
 
 	<include package="." file="meta.zcml" />
 
-	<utility factory=".traversal.GoogleApiKeys"
+	<utility factory=".traversal.GoogleAPIKeys"
 		 name="googleapikeys" />
 	<google:registerGoogleAPIKey name="filepicker"
 				     appid="foo"
 				     key="bar" />
 
-	
+
 </configure>

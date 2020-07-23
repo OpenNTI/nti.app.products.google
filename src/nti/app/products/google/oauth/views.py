@@ -1,16 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-try:
-    from urllib.parse import urlencode
-except ImportError:
-    from urllib import urlencode
-
 import pyramid.httpexceptions as hexc
 
 from pyramid.view import view_config
 
 import requests
+
+from six.moves.urllib_parse import urljoin
+from six.moves.urllib_parse import urlencode
 
 from zope import component
 
@@ -25,13 +23,29 @@ from nti.app.products.google.oauth import OAuthInvalidRequest
 from nti.dataserver.interfaces import IDataserverFolder
 
 
-import logging
-logger = logging.getLogger(__name__)
+logger = __import__('logging').getLogger(__name__)
+
 
 DEFAULT_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 DEFAULT_TOKEN_URL = 'https://www.googleapis.com/oauth2/v4/token'
 
-def initiate_oauth_flow(request, redirect_uri, scopes=[], success=None, failure=None, state=None, params={}):
+LOGON_GOOGLE_OAUTH2 = 'logon.google.oauth2'
+
+
+def redirect_google_oauth2_uri(request):
+    root = request.route_path('objects.generic.traversal', traverse=())
+    root = root[:-1] if root.endswith('/') else root
+    target = urljoin(request.application_url, root)
+    target = target + '/' if not target.endswith('/') else target
+    target = urljoin(target, LOGON_GOOGLE_OAUTH2)
+    return target
+
+
+_redirect_uri = redirect_google_oauth2_uri
+
+
+def initiate_oauth_flow(request, redirect_uri, scopes=[], success=None,
+                        failure=None, state=None, params={}):
     """
     Given a request and a redirect uri, initiate the oauth2 flow.
 
@@ -41,7 +55,7 @@ def initiate_oauth_flow(request, redirect_uri, scopes=[], success=None, failure=
     # We probably don't need to further scope these session keys, but
     # there is a clear sequencing issue of if oauth requests from the
     # same session are interleaved.
-    
+
     for key, value in (('success', success), ('failure', failure)):
         value = value or request.params.get(key)
         if value:
@@ -85,13 +99,13 @@ def exchange_code_for_token(request, token_url=DEFAULT_TOKEN_URL):
     # Confirm code
     if 'code' not in params:
         raise OAuthInvalidRequest(_(u'Could not find code parameter.'))
-    
+
     code = params.get('code')
 
     # Confirm anti-forgery state token
     if 'state' not in params:
         raise OAuthInvalidRequest(_(u'Could not find state parameter.'))
-    
+
     params_state = params.get('state')
     session_state = request.session.get('google.state')
     if params_state != session_state:
@@ -138,8 +152,10 @@ def google_oauth_authorize(request):
 
 _FORWARDED_TOKEN_DATA = ('access_token', 'token_type', 'expires_in')
 
+
 def _oauth_authorize_return(url, data):
     return '%s#%s' % (url, urlencode(data)) if data else url
+
 
 @view_config(name='google.oauth.authorize2',
              route_name='objects.generic.traversal',

@@ -9,9 +9,9 @@ from zope.component.zcml import utility
 
 from nti.schema.field import ValidTextLine
 
-from nti.app.products.google.interfaces import IAPIKey
+from nti.app.products.google.interfaces import IGoogleAPIKey
 
-from nti.app.products.google.traversal import APIKey
+from nti.app.products.google.traversal import GoogleAPIKey
 
 logger = __import__('logging').getLogger(__name__)
 
@@ -32,5 +32,5 @@ def registerGoogleAPIKey(_context, name, appid, key):
     """
     Register google logon settings.
     """
-    factory = functools.partial(APIKey, name, appid, key)
-    utility(_context, provides=IAPIKey, factory=factory, name=name)
+    factory = functools.partial(GoogleAPIKey, name, appid, key)
+    utility(_context, provides=IGoogleAPIKey, factory=factory, name=name)
