@@ -20,6 +20,12 @@
 	<utility factory=".traversal.GoogleAPIKeys"
 		     name="googleapikeys" />
 
+    <include package="nti.externalization" file="meta.zcml" />
+    <include package="nti.externalization" />
+    <ext:registerAutoPackageIO
+        root_interfaces=".interfaces.IGoogleAPIKey"
+        modules=".traversal" />
+
     <!-- Workspace -->
     <subscriber factory=".providers._APIKeyLinkProvider"
                 provides="nti.appserver.workspaces.interfaces.IUserWorkspaceLinkProvider"/>
