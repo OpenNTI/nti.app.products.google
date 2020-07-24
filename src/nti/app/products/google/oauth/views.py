@@ -29,15 +29,13 @@ logger = __import__('logging').getLogger(__name__)
 DEFAULT_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 DEFAULT_TOKEN_URL = 'https://www.googleapis.com/oauth2/v4/token'
 
-LOGON_GOOGLE_OAUTH2 = 'logon.google.oauth2'
 
-
-def redirect_google_oauth2_uri(request):
+def redirect_google_oauth2_uri(request, endpoint):
     root = request.route_path('objects.generic.traversal', traverse=())
     root = root[:-1] if root.endswith('/') else root
     target = urljoin(request.application_url, root)
     target = target + '/' if not target.endswith('/') else target
-    target = urljoin(target, LOGON_GOOGLE_OAUTH2)
+    target = urljoin(target, endpoint)
     return target
 
 
@@ -79,7 +77,7 @@ def initiate_oauth_flow(request, redirect_uri, scopes=[], success=None,
     return response
 
 
-def exchange_code_for_token(request, token_url=DEFAULT_TOKEN_URL):
+def exchange_code_for_token(request, token_url=DEFAULT_TOKEN_URL, redirect_uri=None):
     """
     Given a request from the second portion of the oauth flow
     exchange the code for an access token. Returns the oauth token data
@@ -113,13 +111,16 @@ def exchange_code_for_token(request, token_url=DEFAULT_TOKEN_URL):
 
     # Exchange code for access token and ID token
     # Check for redirect url override (e.g. via the OAuth portal)
-    redirect_uri = params.get('_redirect_uri')
+    try:
+        redirect_uri = params['_redirect_uri']
+    except KeyError:
+        pass
 
     data = {'code': code,
             'client_id': auth_keys.APIKey,
             'grant_type': 'authorization_code',
             'client_secret': auth_keys.SecretKey,
-            'redirect_uri': redirect_uri or _redirect_uri(request)}
+            'redirect_uri': redirect_uri}
     response = requests.post(token_url, data)
     if response.status_code != 200:
         raise OAuthError(_('Invalid response while getting access token.'))
@@ -164,7 +165,8 @@ def _oauth_authorize_return(url, data):
              renderer='rest')
 def google_oauth2(request):
     try:
-        data = exchange_code_for_token(request)
+        redirect_uri = _redirect_uri(request, 'google.oauth.authorize2')
+        data = exchange_code_for_token(request, redirect_uri=redirect_uri)
 
         if 'access_token' not in data:
             return  hexc.HTTPSeeOther(_oauth_authorize_return(request.session.get('google.failure'),

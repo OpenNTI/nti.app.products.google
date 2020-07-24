@@ -25,7 +25,6 @@ from pyramid.view import view_config
 from nti.app.externalization.error import validation_error_to_dict
 
 from nti.app.products.google.oauth.views import DEFAULT_TOKEN_URL
-from nti.app.products.google.oauth.views import LOGON_GOOGLE_OAUTH2
 
 from nti.app.products.google.oauth.views import initiate_oauth_flow
 from nti.app.products.google.oauth.views import exchange_code_for_token
@@ -75,6 +74,7 @@ from nti.links.links import Link
 logger = logging.getLogger(__name__)
 
 REL_LOGIN_GOOGLE = 'logon.google'
+LOGON_GOOGLE_OAUTH2 = 'logon.google.oauth2'
 
 OPENID_CONFIGURATION = None
 DEFAULT_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
@@ -192,7 +192,7 @@ def google_oauth1(request, success=None, failure=None, state=None):
         params['hd'] = hosted_domain
 
     return initiate_oauth_flow(request,
-                               _redirect_uri(request),
+                               _redirect_uri(request, LOGON_GOOGLE_OAUTH2),
                                scopes=['openid', 'email', 'profile'],
                                success=success,
                                failure=failure,
@@ -233,7 +233,10 @@ def google_oauth2(request):
     try:
         config = get_openid_configuration()
         token_url = config.get('token_endpoint', DEFAULT_TOKEN_URL)
-        data = exchange_code_for_token(request, token_url=token_url)
+        redirect_uri = _redirect_uri(request, LOGON_GOOGLE_OAUTH2)
+        data = exchange_code_for_token(request,
+                                       token_url=token_url,
+                                       redirect_uri=redirect_uri)
 
         if 'access_token' not in data:
             return create_failure_response(request,
