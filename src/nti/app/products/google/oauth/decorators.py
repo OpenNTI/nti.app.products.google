@@ -21,8 +21,6 @@ from nti.appserver.pyramid_authorization import has_permission
 
 from nti.dataserver.authorization import ACT_READ
 
-from nti.dataserver.interfaces import IDataserver
-
 from nti.externalization.interfaces import IExternalMappingDecorator
 from nti.externalization.interfaces import StandardExternalFields
 
@@ -42,9 +40,7 @@ class _GoogleAPIKeyDecorator(AbstractAuthenticatedRequestAwareDecorator):
 
     def _do_decorate_external(self, context, result):
         links = result.setdefault(LINKS, [])
-        ds_folder = component.getUtility(IDataserver)
-        ds_folder = ds_folder.dataserver_folder
-        link = Link(ds_folder,
-                    elements=('++etc++googleapikeys', context.__name__, "@@google.oauth.authorize",),
+        link = Link(context,
+                    elements=("@@google.oauth.authorize",),
                     rel='google.authorize')
         links.append(link)

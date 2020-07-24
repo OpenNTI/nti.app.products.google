@@ -3,6 +3,8 @@ from zope import component
 
 from zope.cachedescriptors.property import Lazy
 
+from zope.traversing.interfaces import IEtcNamespace
+
 from nti.dataserver.authorization import ACT_READ
 
 from nti.dataserver.authorization_acl import acl_from_aces
@@ -26,6 +28,10 @@ class GoogleAPIKey(object):
         self.__name__ = name
         self.key = key
         self.appid = appid
+
+    @property
+    def __parent__(self):
+        return component.queryUtility(IEtcNamespace, name='googleapikeys')
 
 
 @interface.implementer(IGoogleAPIKeys)
