@@ -8,6 +8,7 @@ from zope import interface
 from nti.appserver.workspaces.interfaces import IUserWorkspaceLinkProvider
 
 from nti.dataserver.interfaces import IUser
+from nti.dataserver.interfaces import IDataserver
 
 from nti.links.links import Link
 
@@ -28,7 +29,11 @@ class _APIKeyLinkProvider(object):
         # May have more than one key at some point; hardcode for now.
         key = component.queryUtility(IGoogleAPIKey, name='filepicker')
         if key is not None:
-            lnk = Link(key,
-                       method='GET')
+            ds_folder = component.getUtility(IDataserver)
+            ds_folder = ds_folder.dataserver_folder
+            lnk = Link(ds_folder,
+                       elements=('googleapikeys', key.__name__),
+                       method='GET',
+                       rel="GoogleAPIKey")
             result.append(lnk)
         return result
