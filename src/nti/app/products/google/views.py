@@ -32,7 +32,7 @@ def raise_error(data, tb=None,
 @view_config(route_name='objects.generic.traversal',
              context=IGoogleAPIKey,
              request_method='GET',
-             permission=nauth.ACT_READ,
+             #permission=nauth.ACT_READ,
              renderer='rest')
 class GoogleAPIKeyGetView(GenericGetView):
     pass
