@@ -31,6 +31,13 @@ LINKS = StandardExternalFields.LINKS
 logger = __import__('logging').getLogger(__name__)
 
 
+def located_link(parent, link):
+    interface.alsoProvides(link, ILocation)
+    link.__name__ = ''
+    link.__parent__ = parent
+    return link
+
+
 @component.adapter(IGoogleAPIKey)
 @interface.implementer(IExternalMappingDecorator)
 class _GoogleAPIKeyDecorator(AbstractAuthenticatedRequestAwareDecorator):
@@ -43,4 +50,4 @@ class _GoogleAPIKeyDecorator(AbstractAuthenticatedRequestAwareDecorator):
         link = Link(context,
                     elements=("@@google.oauth.authorize",),
                     rel='google.authorize')
-        links.append(link)
+        links.append(located_link(context, link))
