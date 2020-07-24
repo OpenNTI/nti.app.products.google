@@ -25,8 +25,8 @@ class _APIKeyLinkProvider(object):
 
     def links(self, unused_workspace):
         result = []
-        key = component.queryUtility(IGoogleAPIKey)
-        # May have more than one key at some point.
+        # May have more than one key at some point; hardcode for now.
+        key = component.queryUtility(IGoogleAPIKey, name='filepicker')
         if key is not None:
             lnk = Link(key,
                        method='GET')
