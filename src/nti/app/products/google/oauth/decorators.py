@@ -21,25 +21,16 @@ from nti.appserver.pyramid_authorization import has_permission
 
 from nti.dataserver.authorization import ACT_READ
 
-from nti.dataserver.interfaces import IDataserverFolder
+from nti.dataserver.interfaces import IDataserver
 
 from nti.externalization.interfaces import IExternalMappingDecorator
 from nti.externalization.interfaces import StandardExternalFields
 
 from nti.links.links import Link
 
-from nti.traversal.traversal import find_interface
-
 LINKS = StandardExternalFields.LINKS
 
 logger = __import__('logging').getLogger(__name__)
-
-
-def located_link(parent, link):
-    interface.alsoProvides(link, ILocation)
-    link.__name__ = ''
-    link.__parent__ = parent
-    return link
 
 
 @component.adapter(IGoogleAPIKey)
@@ -51,8 +42,9 @@ class _GoogleAPIKeyDecorator(AbstractAuthenticatedRequestAwareDecorator):
 
     def _do_decorate_external(self, context, result):
         links = result.setdefault(LINKS, [])
-        link_context = find_interface(context, IDataserverFolder)
-        link = Link(link_context,
-                    elements=("@@google.oauth.authorize",),
+        ds_folder = component.getUtility(IDataserver)
+        ds_folder = ds_folder.dataserver_folder
+        link = Link(ds_folder,
+                    elements=('++etc++googleapikeys', context.__name__, "@@google.oauth.authorize",),
                     rel='google.authorize')
-        links.append(located_link(link_context, link))
+        links.append(link)

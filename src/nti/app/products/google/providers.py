@@ -32,7 +32,7 @@ class _APIKeyLinkProvider(object):
             ds_folder = component.getUtility(IDataserver)
             ds_folder = ds_folder.dataserver_folder
             lnk = Link(ds_folder,
-                       elements=('googleapikeys', key.__name__),
+                       elements=('++etc++googleapikeys', key.__name__),
                        method='GET',
                        rel="GoogleAPIKey")
             result.append(lnk)
