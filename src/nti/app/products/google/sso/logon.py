@@ -7,8 +7,6 @@ from __future__ import absolute_import
 import logging
 import requests
 
-from urlparse import urljoin
-
 from zope import component
 from zope import interface
 
@@ -26,9 +24,11 @@ from pyramid.view import view_config
 
 from nti.app.externalization.error import validation_error_to_dict
 
-from nti.app.products.google.oauth.views import initiate_oauth_flow
 from nti.app.products.google.oauth.views import DEFAULT_TOKEN_URL
+
+from nti.app.products.google.oauth.views import initiate_oauth_flow
 from nti.app.products.google.oauth.views import exchange_code_for_token
+from nti.app.products.google.oauth.views import redirect_google_oauth2_uri as _redirect_uri
 
 from nti.app.products.google.sso.interfaces import IGoogleUser
 from nti.app.products.google.sso.interfaces import IGoogleLogonSettings
@@ -54,9 +54,6 @@ from nti.appserver.policies.interfaces import ISitePolicyUserEventListener
 
 from nti.common.string import is_true
 
-from nti.common.interfaces import IOAuthKeys
-from nti.common.interfaces import IOAuthService
-
 from nti.dataserver.interfaces import IDataserverFolder
 
 from nti.dataserver.users.common import user_creation_sitename
@@ -77,23 +74,11 @@ from nti.links.links import Link
 logger = logging.getLogger(__name__)
 
 REL_LOGIN_GOOGLE = 'logon.google'
+LOGON_GOOGLE_OAUTH2 = 'logon.google.oauth2'
 
 OPENID_CONFIGURATION = None
-LOGON_GOOGLE_OAUTH2 = 'logon.google.oauth2'
 DEFAULT_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 DISCOVERY_DOC_URL = 'https://accounts.google.com/.well-known/openid-configuration'
-
-
-def redirect_google_oauth2_uri(request):
-    root = request.route_path('objects.generic.traversal', traverse=())
-    root = root[:-1] if root.endswith('/') else root
-    target = urljoin(request.application_url, root)
-    target = target + '/' if not target.endswith('/') else target
-    target = urljoin(target, LOGON_GOOGLE_OAUTH2)
-    return target
-
-
-_redirect_uri = redirect_google_oauth2_uri
 
 
 def get_openid_configuration():
@@ -207,7 +192,7 @@ def google_oauth1(request, success=None, failure=None, state=None):
         params['hd'] = hosted_domain
 
     return initiate_oauth_flow(request,
-                               _redirect_uri(request),
+                               _redirect_uri(request, LOGON_GOOGLE_OAUTH2),
                                scopes=['openid', 'email', 'profile'],
                                success=success,
                                failure=failure,
@@ -248,7 +233,10 @@ def google_oauth2(request):
     try:
         config = get_openid_configuration()
         token_url = config.get('token_endpoint', DEFAULT_TOKEN_URL)
-        data = exchange_code_for_token(request, token_url=token_url)
+        redirect_uri = _redirect_uri(request, LOGON_GOOGLE_OAUTH2)
+        data = exchange_code_for_token(request,
+                                       token_url=token_url,
+                                       redirect_uri=redirect_uri)
 
         if 'access_token' not in data:
             return create_failure_response(request,

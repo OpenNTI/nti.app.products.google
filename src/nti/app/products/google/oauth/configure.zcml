@@ -10,4 +10,10 @@
 	<include package="zope.component" />
 	<include package="zope.security" />
 
+    <!-- Decorators -->
+    <subscriber factory=".decorators._GoogleAPIKeyDecorator"
+                provides="nti.externalization.interfaces.IExternalMappingDecorator"
+                for="nti.app.products.google.interfaces.IGoogleAPIKey
+                     pyramid.interfaces.IRequest" />
+
 </configure>

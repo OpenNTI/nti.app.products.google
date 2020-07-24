@@ -1,16 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-try:
-    from urllib.parse import urlencode
-except ImportError:
-    from urllib import urlencode
-
 import pyramid.httpexceptions as hexc
 
 from pyramid.view import view_config
 
 import requests
+
+from six.moves.urllib_parse import urljoin
+from six.moves.urllib_parse import urlencode
 
 from zope import component
 
@@ -25,13 +23,27 @@ from nti.app.products.google.oauth import OAuthInvalidRequest
 from nti.dataserver.interfaces import IDataserverFolder
 
 
-import logging
-logger = logging.getLogger(__name__)
+logger = __import__('logging').getLogger(__name__)
+
 
 DEFAULT_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 DEFAULT_TOKEN_URL = 'https://www.googleapis.com/oauth2/v4/token'
 
-def initiate_oauth_flow(request, redirect_uri, scopes=[], success=None, failure=None, state=None, params={}):
+
+def redirect_google_oauth2_uri(request, endpoint):
+    root = request.route_path('objects.generic.traversal', traverse=())
+    root = root[:-1] if root.endswith('/') else root
+    target = urljoin(request.application_url, root)
+    target = target + '/' if not target.endswith('/') else target
+    target = urljoin(target, endpoint)
+    return target
+
+
+_redirect_uri = redirect_google_oauth2_uri
+
+
+def initiate_oauth_flow(request, redirect_uri, scopes=[], success=None,
+                        failure=None, state=None, params={}):
     """
     Given a request and a redirect uri, initiate the oauth2 flow.
 
@@ -41,7 +53,7 @@ def initiate_oauth_flow(request, redirect_uri, scopes=[], success=None, failure=
     # We probably don't need to further scope these session keys, but
     # there is a clear sequencing issue of if oauth requests from the
     # same session are interleaved.
-    
+
     for key, value in (('success', success), ('failure', failure)):
         value = value or request.params.get(key)
         if value:
@@ -65,7 +77,7 @@ def initiate_oauth_flow(request, redirect_uri, scopes=[], success=None, failure=
     return response
 
 
-def exchange_code_for_token(request, token_url=DEFAULT_TOKEN_URL):
+def exchange_code_for_token(request, token_url=DEFAULT_TOKEN_URL, redirect_uri=None):
     """
     Given a request from the second portion of the oauth flow
     exchange the code for an access token. Returns the oauth token data
@@ -85,13 +97,13 @@ def exchange_code_for_token(request, token_url=DEFAULT_TOKEN_URL):
     # Confirm code
     if 'code' not in params:
         raise OAuthInvalidRequest(_(u'Could not find code parameter.'))
-    
+
     code = params.get('code')
 
     # Confirm anti-forgery state token
     if 'state' not in params:
         raise OAuthInvalidRequest(_(u'Could not find state parameter.'))
-    
+
     params_state = params.get('state')
     session_state = request.session.get('google.state')
     if params_state != session_state:
@@ -99,13 +111,16 @@ def exchange_code_for_token(request, token_url=DEFAULT_TOKEN_URL):
 
     # Exchange code for access token and ID token
     # Check for redirect url override (e.g. via the OAuth portal)
-    redirect_uri = params.get('_redirect_uri')
+    try:
+        redirect_uri = params['_redirect_uri']
+    except KeyError:
+        pass
 
     data = {'code': code,
             'client_id': auth_keys.APIKey,
             'grant_type': 'authorization_code',
             'client_secret': auth_keys.SecretKey,
-            'redirect_uri': redirect_uri or _redirect_uri(request)}
+            'redirect_uri': redirect_uri}
     response = requests.post(token_url, data)
     if response.status_code != 200:
         raise OAuthError(_('Invalid response while getting access token.'))
@@ -138,8 +153,10 @@ def google_oauth_authorize(request):
 
 _FORWARDED_TOKEN_DATA = ('access_token', 'token_type', 'expires_in')
 
+
 def _oauth_authorize_return(url, data):
     return '%s#%s' % (url, urlencode(data)) if data else url
+
 
 @view_config(name='google.oauth.authorize2',
              route_name='objects.generic.traversal',
@@ -148,7 +165,8 @@ def _oauth_authorize_return(url, data):
              renderer='rest')
 def google_oauth2(request):
     try:
-        data = exchange_code_for_token(request)
+        redirect_uri = _redirect_uri(request, 'google.oauth.authorize2')
+        data = exchange_code_for_token(request, redirect_uri=redirect_uri)
 
         if 'access_token' not in data:
             return  hexc.HTTPSeeOther(_oauth_authorize_return(request.session.get('google.failure'),

@@ -2,4 +2,10 @@
 			xmlns:meta="http://namespaces.zope.org/meta">
 
     <include package=".sso" file="meta.zcml" />
+
+    <meta:directives namespace="http://nextthought.com/ntp/google">
+		<meta:directive	name="registerGoogleAPIKey"
+						schema=".zcml.IRegisterGoogleApiKey"
+						handler=".zcml.registerGoogleAPIKey" />
+    </meta:directives>
 </configure>
