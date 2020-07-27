@@ -39,7 +39,7 @@ class GoogleAPIKey(object):
 @interface.implementer(IGoogleAPIKeys)
 class GoogleAPIKeys(object):
 
-    __name__ = '++etc++googleapikeys'
+    __name__ = 'googleapikeys'
 
     def __getitem__(self, key):
         return component.queryUtility(IGoogleAPIKey, name=key)
