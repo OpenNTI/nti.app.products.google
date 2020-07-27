@@ -5,6 +5,8 @@ from zope.cachedescriptors.property import Lazy
 
 from zope.traversing.interfaces import IEtcNamespace
 
+from nti.coremetadata.interfaces import IDataserver
+
 from nti.dataserver.authorization import ACT_READ
 
 from nti.dataserver.authorization_acl import acl_from_aces
@@ -41,6 +43,11 @@ class GoogleAPIKeys(object):
 
     def __getitem__(self, key):
         return component.queryUtility(IGoogleAPIKey, name=key)
+
+    @property
+    def __parent__(self):
+        ds = component.getUtility(IDataserver)
+        return ds.dataserver_folder
 
     @Lazy
     def __acl__(self):
