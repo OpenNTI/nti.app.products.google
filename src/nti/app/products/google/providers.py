@@ -12,6 +12,7 @@ from nti.dataserver.interfaces import IUser
 from nti.links.links import Link
 
 from nti.app.products.google.interfaces import IGoogleAPIKey
+from nti.coremetadata.interfaces import IDataserver
 
 logger = __import__('logging').getLogger(__name__)
 
@@ -28,7 +29,10 @@ class _APIKeyLinkProvider(object):
         # May have more than one key at some point; hardcode for now.
         key = component.queryUtility(IGoogleAPIKey, name='filepicker')
         if key is not None:
-            lnk = Link(key,
+            ds_folder = component.getUtility(IDataserver)
+            ds_folder = ds_folder.dataserver_folder
+            lnk = Link(ds_folder,
+                       elements=('++etc++googleapikeys', key.__name__),
                        method='GET',
                        rel="GoogleAPIKey")
             result.append(lnk)
