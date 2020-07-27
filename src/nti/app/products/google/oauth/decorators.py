@@ -25,6 +25,7 @@ from nti.externalization.interfaces import IExternalMappingDecorator
 from nti.externalization.interfaces import StandardExternalFields
 
 from nti.links.links import Link
+from nti.coremetadata.interfaces import IDataserver
 
 LINKS = StandardExternalFields.LINKS
 
@@ -47,7 +48,9 @@ class _GoogleAPIKeyDecorator(AbstractAuthenticatedRequestAwareDecorator):
 
     def _do_decorate_external(self, context, result):
         links = result.setdefault(LINKS, [])
-        link = Link(context,
+        ds_folder = component.getUtility(IDataserver)
+        ds_folder = ds_folder.dataserver_folder
+        link = Link(ds_folder,
                     elements=("@@google.oauth.authorize",),
                     rel='google.authorize')
         links.append(located_link(context, link))
