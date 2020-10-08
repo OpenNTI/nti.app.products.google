@@ -16,8 +16,6 @@ from nti.app.products.integration.integration import AbstractIntegration
 
 from nti.app.products.integration.interfaces import IIntegrationCollectionProvider
 
-from nti.app.store.license_utils import can_integrate
-
 from nti.externalization.representation import WithRepr
 
 from nti.schema.fieldproperty import createDirectFieldProperties
@@ -53,6 +51,6 @@ class GoogleIntegrationProvider(object):
         Google SSO authentication.
         """
         result = ()
-        if can_integrate():
+        if self.can_integrate():
             result = (GoogleSSOIntegration(title=u'Integrate with Google SSO'),)
         return result
