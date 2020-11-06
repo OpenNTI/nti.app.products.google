@@ -112,7 +112,7 @@ def exchange_code_for_token(request, token_url=DEFAULT_TOKEN_URL, redirect_uri=N
     # Exchange code for access token and ID token
     # Check for redirect url override (e.g. via the OAuth portal)
     try:
-        redirect_uri = redirect_uri or params['_redirect_uri']
+        redirect_uri = params['_redirect_uri']
     except KeyError:
         pass
 
