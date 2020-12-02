@@ -22,6 +22,8 @@ import pyramid.interfaces
 
 from pyramid.view import view_config
 
+from nti.app.authentication import user_can_login
+
 from nti.app.externalization.error import validation_error_to_dict
 
 from nti.app.products.google.oauth.views import DEFAULT_TOKEN_URL
@@ -321,6 +323,9 @@ def google_logon_from_user_response(request, user_response_dict):
                            u'realname': realname}
         _update_profile(request, user_profile, external_values)
 
+    if not user_can_login(user):
+        return create_failure_response(request,
+                                       error="User cannot login.")
     request.environ['nti.request_had_transaction_side_effects'] = 'True'
     response = create_success_response(request,
                                        userid=user.username,
